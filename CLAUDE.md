@@ -88,10 +88,12 @@ Every change that adds or changes a user-facing text must keep **both languages*
 `./scripts/release.sh <version>` builds a universal (Apple silicon + Intel), ad-hoc signed app into
 `build/release/` (never over the dev-signed `build/WinTab.app`) and zips it into `build/`. `./scripts/release.sh <version> --publish` also tags `v<version>`, pushes the tag and creates
 a GitHub Release with the zip; its "What's new" is the `## <version>` section of `CHANGELOG.md`
-(the script refuses to publish without it). When you make a user-facing change, add a line under
+(the script refuses to publish without it), and it bumps `version`/`sha256` of `Casks/wintab.rb` in the
+`Furcenzo/homebrew-tap` repository (shared with Brew GUI; users install with
+`brew install --cask furcenzo/tap/wintab`). When you make a user-facing change, add a line under
 `## Unreleased` in `CHANGELOG.md`; at release time rename that heading to the version. Publishing is public
-and irreversible – only run `--publish` when the user explicitly asked for it. The repository is not on
-GitHub yet; the user publishes it themselves.
+and irreversible – only run `--publish` when the user explicitly asked for it. The repository is public at
+github.com/Furcenzo/wintab (pushed over HTTPS).
 
 ## Conventions
 

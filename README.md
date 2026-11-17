@@ -21,7 +21,13 @@ a × to close it (with ⇧ held: force quit its app).
 
 ## Download
 
-Get the latest **WinTab-x.y.z.zip** from [Releases](https://github.com/Furcenzo/wintab/releases/latest)
+Install it with [Homebrew](https://brew.sh):
+
+```bash
+brew install --cask furcenzo/tap/wintab
+```
+
+(updates then come with `brew upgrade`), or get the latest **WinTab-x.y.z.zip** from [Releases](https://github.com/Furcenzo/wintab/releases/latest)
 (universal app for Apple silicon and Intel, macOS 15 or later), unzip it and move **WinTab.app** to
 /Applications.
 

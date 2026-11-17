@@ -6,6 +6,7 @@
 #   ./scripts/release.sh 0.2.0            build + zip into build/ (nothing is published)
 #   ./scripts/release.sh 0.2.0 --publish  also tag v0.2.0, push the tag and create a GitHub Release
 #                                         (its "What's new" comes from the "## 0.2.0" section of CHANGELOG.md)
+#                                         and update the cask in the Furcenzo/homebrew-tap repository
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -44,7 +45,8 @@ echo "SHA-256: $SHA"
 [[ "$PUBLISH" == "--publish" ]] || exit 0
 
 NOTES="$(mktemp)"
-trap 'rm -f "$NOTES"' EXIT
+TAP_DIR="$(mktemp -d)"
+trap 'rm -rf "$NOTES" "$TAP_DIR"' EXIT
 cat > "$NOTES" <<EOF
 ## What's new
 
@@ -62,6 +64,8 @@ $CHANGES
 3. Start WinTab – its window guides you through the permissions: **Accessibility** (required) and
    **Screen & System Audio Recording** (optional, for window previews).
 
+Or install it with Homebrew: \`brew install --cask furcenzo/tap/wintab\`
+
 WinTab replaces ⌘Tab with a window switcher (Settings can switch it to ⌥Tab). After updating WinTab, macOS
 may ask for the permissions again: remove WinTab from both lists in System Settings and allow it anew.
 
@@ -71,3 +75,12 @@ EOF
 git tag -a "$TAG" -m "WinTab $VERSION"
 git push origin "$TAG"
 gh release create "$TAG" "$ZIP" --title "WinTab $VERSION" --notes-file "$NOTES" --generate-notes
+
+# Point the Homebrew cask (brew install --cask furcenzo/tap/wintab) at the new release.
+git clone --quiet https://github.com/Furcenzo/homebrew-tap.git "$TAP_DIR"
+CASK="$TAP_DIR/Casks/wintab.rb"
+perl -pi -e "s/^  version \".*\"/  version \"$VERSION\"/; s/^  sha256 \".*\"/  sha256 \"$SHA\"/" "$CASK"
+grep -q "version \"$VERSION\"" "$CASK" && grep -q "sha256 \"$SHA\"" "$CASK" || { echo "Updating $CASK failed." >&2; exit 1; }
+git -C "$TAP_DIR" commit --quiet --all --message "wintab $VERSION"
+git -C "$TAP_DIR" push --quiet origin HEAD
+echo "Updated furcenzo/tap: wintab $VERSION"
