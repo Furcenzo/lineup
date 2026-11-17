@@ -1,11 +1,11 @@
-/* Slovak translation of WinTab.
+/* Slovak translation of Lineup.
    Keys are the English texts from the source code. Run scripts/check-localization.sh after changes. */
 
 "A window switcher like Alt+Tab on Windows. Free software under the GNU GPL v3 or later." = "Prepínač okien ako Alt+Tab vo Windows. Slobodný softvér pod licenciou GNU GPL v3 alebo novšou.";
-"About WinTab" = "O aplikácii WinTab";
+"About Lineup" = "O aplikácii Lineup";
 "Accessibility" = "Prístupnosť";
 "Add App…" = "Pridať aplikáciu…";
-"Allow WinTab in System Settings → General → Login Items." = "Povoľte WinTab v Systémové nastavenia → Všeobecné → Položky prihlásenia.";
+"Allow Lineup in System Settings → General → Login Items." = "Povoľte Lineup v Systémové nastavenia → Všeobecné → Položky prihlásenia.";
 "Allowed" = "Povolené";
 "Allow…" = "Povoliť…";
 "Close Window" = "Zavrieť okno";
@@ -14,20 +14,24 @@
 "Excluded Apps" = "Vylúčené aplikácie";
 "Force Quit %@" = "Vynútiť ukončenie aplikácie %@";
 "General" = "Všeobecné";
-"Minimized" = "Minimalizované";
+"Lineup can't work without Accessibility." = "Bez povolenia Prístupnosť Lineup nemôže fungovať.";
+"Lineup does not store or send anything. If macOS offers to quit and reopen Lineup after you allow a permission, accept it." = "Lineup nič neukladá ani neodosiela. Ak macOS po povolení ponúkne ukončiť a znova otvoriť Lineup, potvrďte to.";
+"Lineup Settings" = "Nastavenia Lineup";
+"Lineup – Permissions" = "Lineup – povolenia";
 "Minimized windows" = "Minimalizované okná";
+"Minimized" = "Minimalizované";
 "No excluded apps." = "Žiadne vylúčené aplikácie.";
 "No windows on this desktop" = "Na tejto ploche nie sú žiadne okná";
 "Open at login" = "Otvoriť po prihlásení";
 "Open Login Items" = "Otvoriť Položky prihlásenia";
-"Optional. For window previews – without it WinTab shows app icons." = "Voliteľné. Na náhľady okien – bez neho WinTab ukazuje ikony aplikácií.";
+"Optional. For window previews – without it Lineup shows app icons." = "Voliteľné. Na náhľady okien – bez neho Lineup ukazuje ikony aplikácií.";
 "Permissions" = "Povolenia";
 "Permissions…" = "Povolenia…";
 "Press %@ to switch windows" = "Okná prepnete skratkou %@";
 "Previews need the Screen Recording permission." = "Náhľady potrebujú povolenie Nahrávanie obrazovky.";
-"Quit WinTab" = "Ukončiť WinTab";
+"Quit Lineup" = "Ukončiť Lineup";
 "Remove" = "Odstrániť";
-"Required. Lets WinTab notice its keyboard shortcut, list your windows and bring the one you pick to the front." = "Povinné. WinTab vďaka nemu zachytí svoju klávesovú skratku, zistí vaše okná a vybrané okno presunie dopredu.";
+"Required. Lets Lineup notice its keyboard shortcut, list your windows and bring the one you pick to the front." = "Povinné. Lineup vďaka nemu zachytí svoju klávesovú skratku, zistí vaše okná a vybrané okno presunie dopredu.";
 "Screen & System Audio Recording" = "Nahrávanie obrazovky a systémového zvuku";
 "Secure input is on – ⌘Tab shows the system app switcher for now" = "Je zapnuté zabezpečené zadávanie – ⌘Tab zatiaľ ukazuje systémový prepínač aplikácií";
 "Settings…" = "Nastavenia…";
@@ -38,15 +42,11 @@
 "The main screen" = "Hlavnej obrazovke";
 "The screen with the mouse pointer" = "Obrazovke s kurzorom myši";
 "Waiting for the Accessibility permission" = "Čaká sa na povolenie Prístupnosť";
-"Welcome to WinTab" = "Vitajte vo WinTab";
+"Welcome to Lineup" = "Vitajte v Lineup";
 "Window previews" = "Náhľady okien";
-"Windows" = "Okná";
 "Windows from all desktops" = "Okná zo všetkých plôch";
 "Windows of hidden apps" = "Okná skrytých aplikácií";
 "Windows of these apps are never shown in the switcher." = "Okná týchto aplikácií sa v prepínači nikdy nezobrazia.";
-"WinTab can't work without Accessibility." = "Bez povolenia Prístupnosť WinTab nemôže fungovať.";
-"WinTab does not store or send anything. If macOS offers to quit and reopen WinTab after you allow a permission, accept it." = "WinTab nič neukladá ani neodosiela. Ak macOS po povolení ponúkne ukončiť a znova otvoriť WinTab, potvrďte to.";
-"WinTab Settings" = "Nastavenia WinTab";
-"WinTab – Permissions" = "WinTab – povolenia";
+"Windows" = "Okná";
 "⌘Tab – replaces the system app switcher" = "⌘Tab – nahradí systémový prepínač aplikácií";
 "⌥Tab – keeps the system ⌘Tab" = "⌥Tab – systémový ⌘Tab ostane";

@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Furcenzo
 
 import Testing
-@testable import WinTabCore
+@testable import LineupCore
 
 @Suite struct GridLayoutTests {
     func fit(_ count: Int, width: Double = 1000, height: Double = 1000) -> GridLayout {

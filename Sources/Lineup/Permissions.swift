@@ -5,13 +5,13 @@ import AppKit
 import ApplicationServices
 import SwiftUI
 
-/// The Accessibility permission (System Settings → Privacy & Security → Accessibility). WinTab needs it
+/// The Accessibility permission (System Settings → Privacy & Security → Accessibility). Lineup needs it
 /// to read other apps' windows, raise them and watch the keyboard for the hotkey.
 @MainActor
 enum AccessibilityPermission {
     static var isGranted: Bool { AXIsProcessTrusted() }
 
-    /// Shows the system prompt (registers WinTab in the Accessibility list) and opens the settings page.
+    /// Shows the system prompt (registers Lineup in the Accessibility list) and opens the settings page.
     static func request() {
         // "AXTrustedCheckOptionPrompt" is the value of kAXTrustedCheckOptionPrompt (a global var Swift 6
         // refuses to read).
@@ -48,7 +48,7 @@ final class HostingWindow<Content: View> {
             window.center()
             self.window = window
         }
-        // WinTab is an agent app – it has to activate itself to bring a window to the front.
+        // Lineup is an agent app – it has to activate itself to bring a window to the front.
         NSApp.activate()
         window?.makeKeyAndOrderFront(nil)
     }
@@ -70,20 +70,20 @@ struct PermissionsView: View {
                     .resizable()
                     .frame(width: 64, height: 64)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Welcome to WinTab")
+                    Text("Welcome to Lineup")
                         .font(.title2.bold())
                     Text("Switch between windows with ⌘Tab, like Alt+Tab on Windows.")
                         .foregroundStyle(.secondary)
                 }
             }
             PermissionRows(status: status)
-            Text("WinTab does not store or send anything. If macOS offers to quit and reopen WinTab after you allow a permission, accept it.")
+            Text("Lineup does not store or send anything. If macOS offers to quit and reopen Lineup after you allow a permission, accept it.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack {
                 if !status.accessibility {
-                    Text("WinTab can't work without Accessibility.")
+                    Text("Lineup can't work without Accessibility.")
                         .font(.callout)
                         .foregroundStyle(.orange)
                 }
@@ -105,12 +105,12 @@ struct PermissionRows: View {
         VStack(alignment: .leading, spacing: 12) {
             PermissionRow(
                 title: "Accessibility",
-                detail: "Required. Lets WinTab notice its keyboard shortcut, list your windows and bring the one you pick to the front.",
+                detail: "Required. Lets Lineup notice its keyboard shortcut, list your windows and bring the one you pick to the front.",
                 isGranted: status.accessibility,
                 action: AccessibilityPermission.request)
             PermissionRow(
                 title: "Screen & System Audio Recording",
-                detail: "Optional. For window previews – without it WinTab shows app icons.",
+                detail: "Optional. For window previews – without it Lineup shows app icons.",
                 isGranted: status.screenRecording,
                 action: {
                     ScreenRecordingPermission.request()

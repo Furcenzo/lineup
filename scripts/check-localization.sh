@@ -3,7 +3,7 @@
 # Copyright (C) 2026 Furcenzo
 #
 # Checks that every user-facing text in the code has a translation in every
-# Sources/WinTab/Resources/<lang>.lproj/Localizable.strings (except en, the development language).
+# Sources/Lineup/Resources/<lang>.lproj/Localizable.strings (except en, the development language).
 #
 # 1. The Swift compiler lists every localizable string (LocalizedStringKey literals,
 #    String(localized:)) while building into .build/l10n.
@@ -32,7 +32,7 @@ if [[ -z "$(ls "$OUT"/*.stringsdata 2>/dev/null)" ]]; then
     build
 fi
 
-/usr/bin/python3 -I - "$OUT" Sources/WinTab/Resources Sources <<'PY'
+/usr/bin/python3 -I - "$OUT" Sources/Lineup/Resources Sources <<'PY'
 import glob, json, pathlib, re, subprocess, sys
 
 strings_dir, resources, sources = sys.argv[1:4]

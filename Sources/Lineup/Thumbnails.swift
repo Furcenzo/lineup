@@ -4,14 +4,14 @@
 import AppKit
 import CPrivate
 import ScreenCaptureKit
-import WinTabCore
+import LineupCore
 
 /// The Screen Recording permission (System Settings → Privacy & Security → Screen & System Audio Recording),
-/// needed for window previews. Without it WinTab shows app icons.
+/// needed for window previews. Without it Lineup shows app icons.
 enum ScreenRecordingPermission {
     static var isGranted: Bool { CGPreflightScreenCaptureAccess() }
 
-    /// Shows the system prompt (only the first time) and registers WinTab in the settings list.
+    /// Shows the system prompt (only the first time) and registers Lineup in the settings list.
     static func request() {
         _ = CGRequestScreenCaptureAccess()
     }

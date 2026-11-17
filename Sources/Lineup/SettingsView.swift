@@ -5,7 +5,7 @@ import AppKit
 import ServiceManagement
 import SwiftUI
 import UniformTypeIdentifiers
-import WinTabCore
+import LineupCore
 
 struct SettingsView: View {
     @Bindable var settings: AppSettings
@@ -82,7 +82,7 @@ struct SettingsView: View {
                     set: { LoginItem.set($0); status.refresh() }))
                 if status.loginItem == .needsApproval {
                     HStack {
-                        Text("Allow WinTab in System Settings → General → Login Items.")
+                        Text("Allow Lineup in System Settings → General → Login Items.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                         Spacer()

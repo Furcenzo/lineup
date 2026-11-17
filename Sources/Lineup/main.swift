@@ -4,7 +4,7 @@
 import AppKit
 import CPrivate
 import SwiftUI
-import WinTabCore
+import LineupCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
@@ -14,11 +14,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private lazy var keyboardTap = KeyboardTap { [unowned self] event in switcher.handle(event) }
     private lazy var focusTracker = FocusTracker { [unowned self] windowID in switcher.recordFocus(windowID: windowID) }
     private let commandTabGuard = CommandTabGuard()
-    private lazy var permissionsWindow: HostingWindow<PermissionsView> = HostingWindow(title: { String(localized: "WinTab – Permissions") }) {
+    private lazy var permissionsWindow: HostingWindow<PermissionsView> = HostingWindow(title: { String(localized: "Lineup – Permissions") }) {
         [unowned self] in
         PermissionsView(status: status) { [unowned self] in permissionsWindow.close() }
     }
-    private lazy var settingsWindow: HostingWindow<SettingsView> = HostingWindow(title: { String(localized: "WinTab Settings") }) {
+    private lazy var settingsWindow: HostingWindow<SettingsView> = HostingWindow(title: { String(localized: "Lineup Settings") }) {
         [unowned self] in SettingsView(settings: settings, status: status)
     }
     /// The permissions window was shown once (on the very first launch).
@@ -32,8 +32,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Agent app: no Dock icon, no app menu (LSUIElement in Info.plist does the same for the bundle;
         // this also covers `swift run`).
         NSApp.setActivationPolicy(.accessory)
-        // WinTab has no windows most of the time; macOS must not quit it for that ("automatic termination").
-        ProcessInfo.processInfo.disableAutomaticTermination("WinTab listens for its keyboard shortcut")
+        // Lineup has no windows most of the time; macOS must not quit it for that ("automatic termination").
+        ProcessInfo.processInfo.disableAutomaticTermination("Lineup listens for its keyboard shortcut")
         applySwitcherSettings()
         // Debug commands only read windows: they must never start the keyboard tap or touch the system ⌘Tab
         // (they end with exit(), which skips every place that would turn ⌘Tab back on).
@@ -41,6 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if runDebugCommand() { return }
         settings.onChange = { [unowned self] in applySettings() }
         SystemAppSwitcher.installSignalHandlers()
+        SystemAppSwitcher.quitLegacyApp()
         SystemAppSwitcher.startWatchdog()
         setUpStatusItem()
         refreshState()
@@ -64,7 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    /// Opening WinTab again (Finder, Spotlight, Launchpad) while it runs shows Settings – the way in when its
+    /// Opening Lineup again (Finder, Spotlight, Launchpad) while it runs shows Settings – the way in when its
     /// menu bar icon is hidden (by a menu bar manager, the notch or System Settings → Menu Bar).
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         showSettings()
@@ -108,7 +109,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 switcher.prefetchOtherSpaces()
             }
         } else if keyboardTap.isInstalled {
-            // The permission was taken away while WinTab runs.
+            // The permission was taken away while Lineup runs.
             switcher.perform(.cancel)
             keyboardTap.stop()
             focusTracker.stop()
@@ -132,7 +133,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func setUpStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "rectangle.stack", accessibilityDescription: "WinTab")
+        item.button?.image = NSImage(systemSymbolName: "rectangle.stack", accessibilityDescription: "Lineup")
         let menu = NSMenu()
         menu.delegate = self
         item.menu = menu
@@ -158,9 +159,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                          keyEquivalent: "").target = self
         }
         menu.addItem(.separator())
-        menu.addItem(withTitle: String(localized: "About WinTab"), action: #selector(showAbout), keyEquivalent: "")
+        menu.addItem(withTitle: String(localized: "About Lineup"), action: #selector(showAbout), keyEquivalent: "")
             .target = self
-        menu.addItem(withTitle: String(localized: "Quit WinTab"), action: #selector(NSApplication.terminate(_:)),
+        menu.addItem(withTitle: String(localized: "Quit Lineup"), action: #selector(NSApplication.terminate(_:)),
                      keyEquivalent: "q")
     }
 
@@ -183,15 +184,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: - Debugging
 
     /// Debugging without the keyboard (results are printed to stdout; with `open`, use `--stdout <file>`):
-    /// - `WINTAB_LIST=1` prints the windows the switcher would offer and quits,
-    /// - `WINTAB_SNAPSHOT=/path.png` saves an image of the switcher overlay and quits (no screen recording
+    /// - `LINEUP_LIST=1` prints the windows the switcher would offer and quits,
+    /// - `LINEUP_SNAPSHOT=/path.png` saves an image of the switcher overlay and quits (no screen recording
     ///   permission needed),
-    /// - `WINTAB_SWITCH=<n>` switches to the n-th window of the list (0 = frontmost), prints the frontmost
+    /// - `LINEUP_SWITCH=<n>` switches to the n-th window of the list (0 = frontmost), prints the frontmost
     ///   app and its focused window afterwards and quits.
     private func runDebugCommand() -> Bool {
         let env = ProcessInfo.processInfo.environment
-        if let view = env["WINTAB_VIEW"], let path = env["WINTAB_SNAPSHOT"] {
-            // `WINTAB_VIEW=settings|permissions WINTAB_SNAPSHOT=/x.png`: image of that window's content.
+        if let view = env["LINEUP_VIEW"], let path = env["LINEUP_SNAPSHOT"] {
+            // `LINEUP_VIEW=settings|permissions LINEUP_SNAPSHOT=/x.png`: image of that window's content.
             // An opaque window background, so the text is readable in light and dark mode.
             let content: NSView = view == "settings"
                 ? NSHostingView(rootView: SettingsView(settings: settings, status: status)
@@ -206,18 +207,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             exit(0)
         }
-        if env["WINTAB_MENUBAR"] != nil {
-            // Where are the menu bar icons of the other running WinTab processes (hidden by a menu bar manager,
+        if env["LINEUP_MENUBAR"] != nil {
+            // Where are the menu bar icons of the other running Lineup processes (hidden by a menu bar manager,
             // behind the notch…)? Needs the Accessibility permission, which the bundle has.
-            // `WINTAB_MENUBAR=<pid>` checks another app instead (to compare).
+            // `LINEUP_MENUBAR=<pid>` checks another app instead (to compare).
             // `=all` lists every app with menu bar items.
-            let apps = env["WINTAB_MENUBAR"] == "all" ? NSWorkspace.shared.runningApplications
-                : Int32(env["WINTAB_MENUBAR"] ?? "").flatMap { NSRunningApplication(processIdentifier: $0) }.map { [$0] }
+            let apps = env["LINEUP_MENUBAR"] == "all" ? NSWorkspace.shared.runningApplications
+                : Int32(env["LINEUP_MENUBAR"] ?? "").flatMap { NSRunningApplication(processIdentifier: $0) }.map { [$0] }
                 ?? SystemAppSwitcher.bundleIDs.flatMap(NSRunningApplication.runningApplications(withBundleIdentifier:))
             for app in apps where app.processIdentifier != ProcessInfo.processInfo.processIdentifier {
                 let extras = AXUIElementCreateApplication(app.processIdentifier).value("AXExtrasMenuBar")
                 let items = extras.map { ($0 as! AXUIElement).array(kAXChildrenAttribute) } ?? []
-                if items.isEmpty && env["WINTAB_MENUBAR"] == "all" { continue }
+                if items.isEmpty && env["LINEUP_MENUBAR"] == "all" { continue }
                 print("\(app.localizedName ?? "?") pid \(app.processIdentifier) at \(app.bundleURL?.path ?? "?"): \(items.count) menu bar item(s)")
                 for item in items { print("  frame: \(item.frame.map { "\($0)" } ?? "?")") }
             }
@@ -227,20 +228,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             fflush(stdout)
             exit(0)
         }
-        if env["WINTAB_SPACES"] != nil {
+        if env["LINEUP_SPACES"] != nil {
             DebugSpaces.run()
             fflush(stdout)
             exit(0)
         }
-        if let cycles = env["WINTAB_CYCLE"].flatMap(Int.init) {
+        if let cycles = env["LINEUP_CYCLE"].flatMap(Int.init) {
             runOpenCloseCycles(cycles)
             return true
         }
-        guard env["WINTAB_LIST"] != nil || env["WINTAB_SNAPSHOT"] != nil || env["WINTAB_SWITCH"] != nil else {
+        guard env["LINEUP_LIST"] != nil || env["LINEUP_SNAPSHOT"] != nil || env["LINEUP_SWITCH"] != nil else {
             return false
         }
-        // `WINTAB_ONLY_APPS=com.apple.Safari,…`: list only these apps (screenshots with demo windows only).
-        if let only = env["WINTAB_ONLY_APPS"] {
+        // `LINEUP_ONLY_APPS=com.apple.Safari,…`: list only these apps (screenshots with demo windows only).
+        if let only = env["LINEUP_ONLY_APPS"] {
             switcher.listOptions.onlyBundleIDs = Set(only.split(separator: ",").map(String.init))
         }
         Task { @MainActor in
@@ -262,7 +263,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                     + (w.isMinimized ? " minimized" : "") + (w.isAppHidden ? " hidden" : "")
                     + (w.isOnOtherSpace ? " other-space" : ""))
             }
-            if let path = env["WINTAB_SNAPSHOT"] {
+            if let path = env["LINEUP_SNAPSHOT"] {
                 // Thumbnails arrive asynchronously.
                 if switcher.showsPreviews { try? await Task.sleep(for: .seconds(1.5)) }
                 do {
@@ -272,7 +273,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                     print("Snapshot failed: \(error)")
                 }
             }
-            if let n = env["WINTAB_SWITCH"].flatMap(Int.init), handles.indices.contains(n) {
+            if let n = env["LINEUP_SWITCH"].flatMap(Int.init), handles.indices.contains(n) {
                 print("Switching to \(n): \(handles[n].window.displayTitle)")
                 WindowSource.activate(handles[n])
                 try? await Task.sleep(for: .milliseconds(900))
@@ -289,7 +290,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return true
     }
 
-    /// `WINTAB_CYCLE=<n>`: opens the overlay on screen, moves the selection and closes it (without
+    /// `LINEUP_CYCLE=<n>`: opens the overlay on screen, moves the selection and closes it (without
     /// switching) n times – a smoke test for the panel's open/close cycle. Exits with 0 when done.
     private func runOpenCloseCycles(_ cycles: Int) {
         Task { @MainActor in
@@ -320,12 +321,13 @@ extension NSMenu {
     }
 }
 
-// `WinTab --watchdog <pid>`: the helper process started by SystemAppSwitcher.startWatchdog().
+// `Lineup --watchdog <pid>`: the helper process started by SystemAppSwitcher.startWatchdog().
 if CommandLine.arguments.count == 3, CommandLine.arguments[1] == SystemAppSwitcher.watchdogArgument,
    let parentPID = pid_t(CommandLine.arguments[2]) {
     SystemAppSwitcher.runWatchdog(parentPID: parentPID)
 }
 
+AppSettings.migrateLegacyDefaults()
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate

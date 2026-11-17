@@ -90,7 +90,7 @@ public enum ShortcutChoice: String, Sendable, CaseIterable {
         }
     }
 
-    /// Whether WinTab has to turn off the system app switcher for this shortcut.
+    /// Whether Lineup has to turn off the system app switcher for this shortcut.
     public var replacesSystemSwitcher: Bool { self == .commandTab }
 }
 

@@ -3,7 +3,7 @@
 
 /// Most-recently-used order of windows, keyed by `SwitcherWindow.id`.
 ///
-/// Windows WinTab has seen focused are ordered by recency. Windows it has never seen focused (WinTab just
+/// Windows Lineup has seen focused are ordered by recency. Windows it has never seen focused (Lineup just
 /// started, or a window opened in the background) are added behind them in the order they were first
 /// listed – which is the on-screen front-to-back order, the best guess there is.
 public struct RecentWindows: Sendable, Equatable {

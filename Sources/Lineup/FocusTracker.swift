@@ -4,7 +4,7 @@
 import AppKit
 import ApplicationServices
 import CPrivate
-import WinTabCore
+import LineupCore
 
 /// Watches which window has the focus, for the most-recently-used order:
 /// - `NSWorkspace.didActivateApplicationNotification` – another app came to the front,

@@ -6,12 +6,12 @@ import Carbon.HIToolbox
 import CPrivate
 
 /// The system app switcher (⌘Tab / ⌘⇧Tab). The WindowServer handles these shortcuts before any event tap,
-/// so WinTab can only get ⌘Tab by turning them off (private `CGSSetSymbolicHotKeyEnabled`, like AltTab).
+/// so Lineup can only get ⌘Tab by turning them off (private `CGSSetSymbolicHotKeyEnabled`, like AltTab).
 ///
-/// The off state is global and outlives WinTab, so it is always turned back on:
-/// - when WinTab quits normally (`AppDelegate.applicationWillTerminate`),
+/// The off state is global and outlives Lineup, so it is always turned back on:
+/// - when Lineup quits normally (`AppDelegate.applicationWillTerminate`),
 /// - from signal handlers (Ctrl-C, `kill`, crashes),
-/// - by a watchdog process that waits for WinTab to exit by any means – also force quit (SIGKILL).
+/// - by a watchdog process that waits for Lineup to exit by any means – also force quit (SIGKILL).
 enum SystemAppSwitcher {
     /// ⌘Tab and ⌘⇧Tab. ⌘` (next window of the same app, 6) stays with the system.
     nonisolated static let hotKeys: [CGSSymbolicHotKey] = [1, 2]
@@ -39,7 +39,7 @@ enum SystemAppSwitcher {
 
     static let watchdogArgument = "--watchdog"
 
-    /// Starts `WinTab --watchdog <pid>`: a second process without UI that turns the system switcher back on
+    /// Starts `Lineup --watchdog <pid>`: a second process without UI that turns the system switcher back on
     /// when this process exits for any reason.
     static func startWatchdog() {
         guard let executable = Bundle.main.executableURL else { return }
@@ -53,7 +53,7 @@ enum SystemAppSwitcher {
     static func runWatchdog(parentPID: pid_t) -> Never {
         let source = DispatchSource.makeProcessSource(identifier: parentPID, eventMask: .exit, queue: .main)
         source.setEventHandler {
-            // A newly started WinTab (e.g. after a rebuild) has already taken over ⌘Tab – leave it alone.
+            // A newly started Lineup (e.g. after a rebuild) has already taken over ⌘Tab – leave it alone.
             let others = bundleIDs.flatMap(NSRunningApplication.runningApplications(withBundleIdentifier:)).filter {
                 $0.processIdentifier != parentPID && !$0.isTerminated
             }
@@ -69,15 +69,25 @@ enum SystemAppSwitcher {
         dispatchMain()
     }
 
-    static let bundleID = "io.github.furcenzo.wintab"
-    /// The installed app and development builds ("WinTab Dev") – any of them may hold ⌘Tab.
+    static let bundleID = "io.github.furcenzo.lineup"
+    /// The installed app and development builds ("Lineup Dev") – any of them may hold ⌘Tab.
     static let bundleIDs = [bundleID, bundleID + ".dev"]
+    /// Lineup used to be called WinTab.
+    static let legacyBundleID = "io.github.furcenzo.wintab"
+
+    /// Quits a WinTab that still runs (e.g. started as a login item before the update) – both would react to
+    /// the shortcut. It turns the system ⌘Tab back on as it quits; `CommandTabGuard` turns it off again.
+    static func quitLegacyApp() {
+        for id in [legacyBundleID, legacyBundleID + ".dev"] {
+            NSRunningApplication.runningApplications(withBundleIdentifier: id).forEach { $0.terminate() }
+        }
+    }
 }
 
 /// Decides whether the system switcher is on or off, and keeps it that way.
 @MainActor
 final class CommandTabGuard {
-    /// True when WinTab is set to ⌘Tab and its keyboard tap runs.
+    /// True when Lineup is set to ⌘Tab and its keyboard tap runs.
     var wantsCommandTab = false {
         didSet { apply() }
     }

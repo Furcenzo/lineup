@@ -127,7 +127,7 @@ public enum WindowListBuilder {
     /// 3. windows of hidden apps,
     /// 4. minimized windows,
     /// (3 and 4 keep the order of `apps`, then the app's own window order).
-    /// Windows without a switchable subrole, windows of `excludedPID` (WinTab itself) and AX windows found
+    /// Windows without a switchable subrole, windows of `excludedPID` (Lineup itself) and AX windows found
     /// in none of these groups are left out. With `otherSpaces` empty, only the current Space is listed.
     /// `options` leaves out minimized windows, hidden apps and excluded apps as the user chose.
     public static func build(onScreen: [OnScreenWindow], otherSpaces: [OnScreenWindow] = [], axWindows: [AXWindow],
@@ -196,7 +196,7 @@ public enum WindowListBuilder {
         return result
     }
 
-    /// Normal app windows: layer 0, visible, not tiny, not WinTab's own.
+    /// Normal app windows: layer 0, visible, not tiny, not Lineup's own.
     private static func switchCandidates(_ windows: [OnScreenWindow], excludedPID: Int32?) -> [OnScreenWindow] {
         windows.filter {
             $0.layer == 0 && $0.alpha > 0 && $0.pid != excludedPID

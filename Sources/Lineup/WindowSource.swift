@@ -4,7 +4,7 @@
 import AppKit
 import ApplicationServices
 import CPrivate
-import WinTabCore
+import LineupCore
 
 /// A window in the switcher together with what is needed to show it and switch to it.
 struct WindowHandle {
@@ -126,7 +126,7 @@ enum WindowSource {
         AXUIElementSetAttributeValue(handle.element, kAXMainAttribute as CFString, kCFBooleanTrue)
         AXUIElementPerformAction(handle.element, kAXRaiseAction as CFString)
         // Setting kAXFrontmostAttribute is not subject to the "cooperative activation" rules of macOS 14+
-        // that make NSRunningApplication.activate() fail for apps in the background, like WinTab.
+        // that make NSRunningApplication.activate() fail for apps in the background, like Lineup.
         let appElement = AXUIElementCreateApplication(window.pid)
         AXUIElementSetAttributeValue(appElement, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
         app?.activate()

@@ -5,22 +5,22 @@
 import PackageDescription
 
 let package = Package(
-    name: "WinTab",
+    name: "Lineup",
     platforms: [.macOS(.v15)],
     products: [
-        .executable(name: "WinTab", targets: ["WinTab"]),
+        .executable(name: "Lineup", targets: ["Lineup"]),
     ],
     targets: [
         // Pure logic (window list ordering, selection, hotkey state machine) – no UI, tested.
-        .target(name: "WinTabCore"),
+        .target(name: "LineupCore"),
         // Declarations of private macOS APIs (see Sources/CPrivate/include/CPrivate.h).
         .target(name: "CPrivate", linkerSettings: [.linkedFramework("ApplicationServices")]),
         .executableTarget(
-            name: "WinTab",
-            dependencies: ["WinTabCore", "CPrivate"],
+            name: "Lineup",
+            dependencies: ["LineupCore", "CPrivate"],
             // Localizable.strings files are copied into the .app by scripts/build-app.sh
             exclude: ["Resources"]
         ),
-        .testTarget(name: "WinTabCoreTests", dependencies: ["WinTabCore"]),
+        .testTarget(name: "LineupCoreTests", dependencies: ["LineupCore"]),
     ]
 )

@@ -5,6 +5,13 @@ version into the GitHub Release notes, so add a section before publishing.
 
 ## Unreleased
 
+## 0.2.0
+
+- **WinTab is now Lineup.** The old name clashed with the Wintab tablet API. Homebrew users get Lineup with
+  `brew upgrade` (the `wintab` cask moves to `lineup`). Your settings come along, but macOS sees a new app:
+  allow Accessibility (and Screen Recording for previews) again, turn on Open at Login in Settings again if
+  you used it, and remove WinTab from those lists in System Settings. A WinTab that still runs is quit.
+
 ## 0.1.2
 
 - Opening WinTab again (Finder, Spotlight) while it runs shows its Settings – handy when the menu bar icon
@@ -12,9 +19,9 @@ version into the GitHub Release notes, so add a section before publishing.
 
 ## 0.1.1
 
-- A click outside the switcher closes it without switching, like Esc ([#1](https://github.com/Furcenzo/wintab/issues/1)).
+- A click outside the switcher closes it without switching, like Esc ([#1](https://github.com/Furcenzo/lineup/issues/1)).
 - The selected window tile has a × button that closes the window; with ⇧ held it turns red and force quits the
-  app ([#2](https://github.com/Furcenzo/wintab/issues/2)).
+  app ([#2](https://github.com/Furcenzo/lineup/issues/2)).
 
 ## 0.1.0
 

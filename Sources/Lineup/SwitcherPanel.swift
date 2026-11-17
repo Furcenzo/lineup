@@ -3,7 +3,7 @@
 
 import AppKit
 import SwiftUI
-import WinTabCore
+import LineupCore
 
 /// What the switcher overlay shows.
 @MainActor @Observable
@@ -66,7 +66,7 @@ struct TileMetrics {
 }
 
 /// The floating overlay. It is a non-activating panel: it never becomes the key window and never
-/// activates WinTab, so the frontmost app keeps its focus while the switcher is open.
+/// activates Lineup, so the frontmost app keeps its focus while the switcher is open.
 @MainActor
 final class SwitcherPanel: NSPanel {
     let model = SwitcherModel()

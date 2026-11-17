@@ -21,7 +21,7 @@ git status --porcelain -- 'Sources/*.swift' 'Sources/*.strings' 2>/dev/null | gr
 
 if ! report="$(./scripts/check-localization.sh 2>&1)"; then
     print -r -- "$report" | grep -E '^(error|check-localization)' >&2
-    echo "Every user-facing text must be English in code and translated in Sources/WinTab/Resources/sk.lproj/Localizable.strings (see CLAUDE.md)." >&2
+    echo "Every user-facing text must be English in code and translated in Sources/Lineup/Resources/sk.lproj/Localizable.strings (see CLAUDE.md)." >&2
     (( blocking )) && exit 2
 fi
 exit 0

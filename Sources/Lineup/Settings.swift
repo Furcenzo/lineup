@@ -3,7 +3,7 @@
 
 import AppKit
 import ServiceManagement
-import WinTabCore
+import LineupCore
 
 /// Where the switcher appears.
 enum SwitcherScreen: String, CaseIterable {
@@ -61,6 +61,18 @@ final class AppSettings {
         showHiddenApps = defaults.object(forKey: Key.showHidden) as? Bool ?? true
         excludedBundleIDs = defaults.stringArray(forKey: Key.excluded) ?? []
         screen = defaults.string(forKey: Key.screen).flatMap(SwitcherScreen.init(rawValue:)) ?? .mouse
+    }
+
+    /// Lineup was called WinTab (bundle ID `io.github.furcenzo.wintab`). If the new defaults domain doesn't exist
+    /// yet, copy the old one into it once (shortcut, excluded apps…). Runs before anything reads the defaults.
+    static func migrateLegacyDefaults() {
+        guard let currentID = Bundle.main.bundleIdentifier, currentID.hasPrefix(SystemAppSwitcher.bundleID) else { return }
+        let legacyID = SystemAppSwitcher.legacyBundleID + currentID.dropFirst(SystemAppSwitcher.bundleID.count)
+        let defaults = UserDefaults.standard
+        guard defaults.persistentDomain(forName: currentID) == nil,
+              let legacy = defaults.persistentDomain(forName: legacyID), !legacy.isEmpty
+        else { return }
+        defaults.setPersistentDomain(legacy, forName: currentID)
     }
 
     var listOptions: ListOptions {

@@ -3,7 +3,7 @@
 # Copyright (C) 2026 Furcenzo
 #
 # One-time setup for development: creates a self-signed code signing certificate
-# "WinTab Local Dev" in your login keychain. scripts/build-app.sh then signs every build with it,
+# "Lineup Local Dev" in your login keychain. scripts/build-app.sh then signs every build with it,
 # so macOS keeps the Accessibility (and later Screen Recording) permission between builds.
 #
 # Run it yourself in Terminal – macOS asks for your login password to trust the certificate:
@@ -11,10 +11,10 @@
 #
 # The certificate is only good for signing apps on this Mac; it is not an Apple Developer ID and
 # cannot be used for public releases. Remove it any time in Keychain Access (login → My Certificates
-# → "WinTab Local Dev" → Delete). Based on AltTab's scripts/codesign (lwouis/alt-tab-macos, GPL-3.0).
+# → "Lineup Local Dev" → Delete). Based on AltTab's scripts/codesign (lwouis/alt-tab-macos, GPL-3.0).
 set -euo pipefail
 
-NAME="WinTab Local Dev"
+NAME="Lineup Local Dev"
 KEYCHAIN="$HOME/Library/Keychains/login.keychain-db"
 
 if security find-identity -v -p codesigning | grep -q "\"$NAME\""; then

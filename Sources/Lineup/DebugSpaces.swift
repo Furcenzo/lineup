@@ -4,7 +4,7 @@
 import AppKit
 import CPrivate
 
-/// `WINTAB_SPACES=1`: prints what the private Space APIs report (for checking a new macOS version).
+/// `LINEUP_SPACES=1`: prints what the private Space APIs report (for checking a new macOS version).
 @MainActor
 enum DebugSpaces {
     /// CGWindowListCreateDescriptionFromArray wants the window IDs stored as the array's raw values.

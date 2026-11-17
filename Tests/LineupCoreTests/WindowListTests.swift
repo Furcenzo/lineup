@@ -2,13 +2,13 @@
 // Copyright (C) 2026 Furcenzo
 
 import Testing
-@testable import WinTabCore
+@testable import LineupCore
 
 @Suite struct WindowListTests {
     let finder = AppInfo(pid: 10, name: "Finder")
     let safari = AppInfo(pid: 20, name: "Safari")
     let notes = AppInfo(pid: 30, name: "Notes", isHidden: true)
-    let wintab = AppInfo(pid: 99, name: "WinTab")
+    let lineup = AppInfo(pid: 99, name: "Lineup")
 
     func frame(_ x: Double) -> Rect { Rect(x: x, y: 0, width: 800, height: 600) }
 
@@ -68,7 +68,7 @@ import Testing
             ax(2, id: 3, pid: 99, title: "Switcher"),
             ax(3, id: 4, pid: 10, title: "No subrole", subrole: nil),
         ]
-        let list = WindowListBuilder.build(onScreen: onScreen, axWindows: axWindows, apps: [finder, wintab],
+        let list = WindowListBuilder.build(onScreen: onScreen, axWindows: axWindows, apps: [finder, lineup],
                                            excludedPID: 99)
         #expect(list.map(\.title) == ["Copy"])
     }

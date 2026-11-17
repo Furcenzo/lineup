@@ -3,10 +3,10 @@
 
 import AppKit
 import OSLog
-import WinTabCore
+import LineupCore
 
-/// `log stream --level debug --predicate 'subsystem == "io.github.furcenzo.wintab"'` shows these.
-let log = Logger(subsystem: "io.github.furcenzo.wintab", category: "switcher")
+/// `log stream --level debug --predicate 'subsystem == "io.github.furcenzo.lineup"'` shows these.
+let log = Logger(subsystem: "io.github.furcenzo.lineup", category: "switcher")
 
 /// Connects the keyboard tap, the window list and the overlay: one "session" lasts from pressing the
 /// hotkey until the modifier is released (switch), Esc is pressed or a window is clicked.

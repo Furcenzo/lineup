@@ -6,7 +6,7 @@
 // use small and always have a fallback.
 //
 // The WT* functions look the private symbols up at run time (dlsym), so a macOS release without them
-// does not stop WinTab from launching: the functions then return NULL / false and WinTab falls back to
+// does not stop Lineup from launching: the functions then return NULL / false and Lineup falls back to
 // public APIs. Their knowledge comes from AltTab (lwouis/alt-tab-macos, GPL-3.0), which in turn credits
 // yabai and Hammerspoon.
 

@@ -4,7 +4,7 @@
 import AppKit
 import ApplicationServices
 import CPrivate
-import WinTabCore
+import LineupCore
 
 /// Windows on other Spaces (desktops and fullscreen apps), from the WindowServer's private Space APIs.
 enum Spaces {
@@ -44,7 +44,7 @@ final class RemoteWindowSearch {
     /// The windows the last search of an app was looking for.
     private var lastWanted = [pid_t: Set<CGWindowID>]()
     private var inFlight = Set<pid_t>()
-    private let queue = DispatchQueue(label: "io.github.furcenzo.wintab.remote-window-search", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "io.github.furcenzo.lineup.remote-window-search", qos: .userInitiated)
 
     func element(for windowID: CGWindowID) -> AXUIElement? { elements[windowID] }
     var knownWindowIDs: Set<CGWindowID> { Set(elements.keys) }

@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Furcenzo
 
 import AppKit
-import WinTabCore
+import LineupCore
 
 /// A global keyboard event tap (CGEventTap). It sees every key press in the session, may swallow it,
 /// and needs the Accessibility permission. The callback runs on the main run loop.
@@ -20,7 +20,7 @@ final class KeyboardTap {
     /// The tap exists (it was created with the Accessibility permission).
     var isInstalled: Bool { tap != nil }
 
-    /// Fails (returns false) when WinTab does not have the Accessibility permission yet.
+    /// Fails (returns false) when Lineup does not have the Accessibility permission yet.
     @discardableResult
     func start() -> Bool {
         if tap != nil { return true }

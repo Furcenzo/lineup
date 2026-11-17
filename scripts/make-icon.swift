@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Furcenzo
 //
-// Draws the WinTab app icon – three stacked windows on a blue rounded square – and writes
+// Draws the Lineup app icon – three stacked windows on a blue rounded square – and writes
 //   Assets/AppIcon.png   (1024 × 1024, for the README)
 //   Assets/AppIcon.icns  (all macOS icon sizes, copied into the app by scripts/build-app.sh)
 // Run from the repository root:  swift scripts/make-icon.swift
@@ -127,7 +127,7 @@ try fileManager.createDirectory(at: assets, withIntermediateDirectories: true)
 try writePNG(drawIcon(size: 1024), to: assets.appendingPathComponent("AppIcon.png"))
 
 // iconutil wants an .iconset folder with these names.
-let iconset = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("WinTab-\(UUID().uuidString).iconset")
+let iconset = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("Lineup-\(UUID().uuidString).iconset")
 try fileManager.createDirectory(at: iconset, withIntermediateDirectories: true)
 defer { try? fileManager.removeItem(at: iconset) }
 for points in [16, 32, 128, 256, 512] {

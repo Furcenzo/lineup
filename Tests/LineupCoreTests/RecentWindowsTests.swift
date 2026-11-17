@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Furcenzo
 
 import Testing
-@testable import WinTabCore
+@testable import LineupCore
 
 @Suite struct RecentWindowsTests {
     func window(_ id: UInt32, minimized: Bool = false) -> SwitcherWindow {
