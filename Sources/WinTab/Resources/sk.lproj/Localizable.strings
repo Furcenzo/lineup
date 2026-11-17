@@ -1,0 +1,18 @@
+/* Slovak translation of WinTab.
+   Keys are the English texts from the source code. Run scripts/check-localization.sh after changes. */
+
+"1. Click “Open System Settings”." = "1. Kliknite na „Otvoriť Systémové nastavenia“.";
+"2. In Privacy & Security → Accessibility, turn on WinTab." = "2. V časti Súkromie a bezpečnosť → Prístupnosť zapnite WinTab.";
+"3. This window closes by itself and ⌥Tab starts working." = "3. Toto okno sa samo zavrie a ⌥Tab začne fungovať.";
+"A window switcher like Alt+Tab on Windows. Free software under the GNU GPL v3 or later." = "Prepínač okien ako Alt+Tab vo Windows. Slobodný softvér pod licenciou GNU GPL v3 alebo novšou.";
+"About WinTab" = "O aplikácii WinTab";
+"Grant Accessibility Permission…" = "Udeliť povolenie Prístupnosť…";
+"It lets WinTab notice the ⌥Tab shortcut, list the windows of your apps and bring the one you pick to the front. WinTab does not record or send anything." = "Vďaka nemu WinTab zachytí skratku ⌥Tab, zistí okná vašich aplikácií a vybrané okno presunie dopredu. WinTab nič nenahráva ani neodosiela.";
+"Minimized" = "Minimalizované";
+"No windows on this desktop" = "Na tejto ploche nie sú žiadne okná";
+"Open System Settings" = "Otvoriť Systémové nastavenia";
+"Press ⌥Tab to switch windows" = "Okná prepnete skratkou ⌥Tab";
+"Quit WinTab" = "Ukončiť WinTab";
+"Waiting for the Accessibility permission" = "Čaká sa na povolenie Prístupnosť";
+"WinTab needs the Accessibility permission" = "WinTab potrebuje povolenie Prístupnosť";
+"WinTab – Accessibility Permission" = "WinTab – povolenie Prístupnosť";
