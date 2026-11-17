@@ -58,9 +58,29 @@ public struct AppInfo: Sendable, Equatable {
     public var pid: Int32
     public var name: String
     public var isHidden: Bool
+    public var bundleID: String?
 
-    public init(pid: Int32, name: String, isHidden: Bool = false) {
-        self.pid = pid; self.name = name; self.isHidden = isHidden
+    public init(pid: Int32, name: String, isHidden: Bool = false, bundleID: String? = nil) {
+        self.pid = pid; self.name = name; self.isHidden = isHidden; self.bundleID = bundleID
+    }
+}
+
+/// What the user chose to see in the switcher (Settings).
+public struct ListOptions: Sendable, Equatable {
+    public var includeMinimized: Bool
+    public var includeHiddenApps: Bool
+    /// Apps whose windows are never listed.
+    public var excludedBundleIDs: Set<String>
+
+    public init(includeMinimized: Bool = true, includeHiddenApps: Bool = true, excludedBundleIDs: Set<String> = []) {
+        self.includeMinimized = includeMinimized; self.includeHiddenApps = includeHiddenApps
+        self.excludedBundleIDs = excludedBundleIDs
+    }
+
+    /// Whether the app's windows may be listed at all.
+    public func includes(_ app: AppInfo) -> Bool {
+        guard let bundleID = app.bundleID else { return true }
+        return !excludedBundleIDs.contains(bundleID)
     }
 }
 
@@ -106,8 +126,10 @@ public enum WindowListBuilder {
     /// (3 and 4 keep the order of `apps`, then the app's own window order).
     /// Windows without a switchable subrole, windows of `excludedPID` (WinTab itself) and AX windows found
     /// in none of these groups are left out. With `otherSpaces` empty, only the current Space is listed.
+    /// `options` leaves out minimized windows, hidden apps and excluded apps as the user chose.
     public static func build(onScreen: [OnScreenWindow], otherSpaces: [OnScreenWindow] = [], axWindows: [AXWindow],
-                             apps: [AppInfo], excludedPID: Int32? = nil) -> [SwitcherWindow] {
+                             apps: [AppInfo], excludedPID: Int32? = nil, options: ListOptions = ListOptions())
+                             -> [SwitcherWindow] {
         let appsByPID = Dictionary(apps.map { ($0.pid, $0) }, uniquingKeysWith: { first, _ in first })
         let appRank = Dictionary(apps.enumerated().map { ($1.pid, $0) }, uniquingKeysWith: { first, _ in first })
 
@@ -131,14 +153,14 @@ public enum WindowListBuilder {
 
         for (order, ax) in axWindows.enumerated() {
             guard ax.pid != excludedPID, let subrole = ax.subrole, switchableSubroles.contains(subrole),
-                  let app = appsByPID[ax.pid] else { continue }
+                  let app = appsByPID[ax.pid], options.includes(app) else { continue }
             var item = SwitcherWindow(token: ax.token, windowID: ax.windowID, pid: ax.pid, appName: app.name,
                                       title: ax.title, isMinimized: ax.isMinimized, isAppHidden: app.isHidden)
             let rank = appRank[ax.pid] ?? Int.max
             if ax.isMinimized {
-                minimized.append((rank, order, item))
+                if options.includeMinimized { minimized.append((rank, order, item)) }
             } else if app.isHidden {
-                hidden.append((rank, order, item))
+                if options.includeHiddenApps { hidden.append((rank, order, item)) }
             } else if let z = zIndex(of: ax, in: candidates, byID: zIndexByID, used: usedZ) {
                 usedZ.insert(z)
                 visible.append((z, item))

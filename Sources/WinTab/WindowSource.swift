@@ -22,7 +22,7 @@ enum WindowSource {
 
     /// The windows to offer: the current Space (+ minimized and hidden windows), and with `remote` also the
     /// windows on other Spaces whose elements `remote` has found; the rest is handed to `remote` to look up.
-    static func currentWindows(remote: RemoteWindowSearch? = nil) -> [WindowHandle] {
+    static func currentWindows(remote: RemoteWindowSearch? = nil, options: ListOptions = ListOptions()) -> [WindowHandle] {
         let apps = NSWorkspace.shared.runningApplications.filter {
             $0.activationPolicy == .regular && !$0.isTerminated
         }
@@ -34,8 +34,11 @@ enum WindowSource {
         var icons = [Int32: NSImage]()
         for app in apps where app.processIdentifier != ownPID {
             let pid = app.processIdentifier
-            appInfos.append(AppInfo(pid: pid, name: app.localizedName ?? app.bundleIdentifier ?? "?",
-                                    isHidden: app.isHidden))
+            let info = AppInfo(pid: pid, name: app.localizedName ?? app.bundleIdentifier ?? "?",
+                               isHidden: app.isHidden, bundleID: app.bundleIdentifier)
+            // Excluded apps and (if not wanted) hidden apps: don't even ask them for their windows.
+            guard options.includes(info), options.includeHiddenApps || !info.isHidden else { continue }
+            appInfos.append(info)
             icons[pid] = app.icon
             let appElement = AXUIElementCreateApplication(pid)
             AXUIElementSetMessagingTimeout(appElement, axTimeout)
@@ -80,7 +83,8 @@ enum WindowSource {
         }
 
         let windows = WindowListBuilder.build(onScreen: onScreenWindows(), otherSpaces: otherSpaces,
-                                              axWindows: axWindows, apps: appInfos, excludedPID: ownPID)
+                                              axWindows: axWindows, apps: appInfos, excludedPID: ownPID,
+                                              options: options)
         return windows.map { WindowHandle(window: $0, element: elements[$0.token], icon: icons[$0.pid]) }
     }
 

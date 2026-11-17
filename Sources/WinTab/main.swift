@@ -3,24 +3,29 @@
 
 import AppKit
 import CPrivate
+import SwiftUI
 import WinTabCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
-    private static let shortcutDefaultsKey = "shortcut"
-    private var shortcut = ShortcutChoice(storedValue: UserDefaults.standard.string(forKey: shortcutDefaultsKey))
-    private lazy var switcher = SwitcherController(config: shortcut.config)
+    private let settings = AppSettings()
+    private let status = SystemStatus()
+    private lazy var switcher = SwitcherController(config: settings.shortcut.config)
     private lazy var keyboardTap = KeyboardTap { [unowned self] event in switcher.handle(event) }
     private lazy var focusTracker = FocusTracker { [unowned self] windowID in switcher.recordFocus(windowID: windowID) }
-    private static let previewsDefaultsKey = "previews"
-    private static let askedScreenRecordingKey = "askedForScreenRecording"
-    /// Window previews switched on in the menu (default on); they also need the Screen Recording permission.
-    private var previewsWanted = UserDefaults.standard.object(forKey: previewsDefaultsKey) as? Bool ?? true
-    private static let allSpacesDefaultsKey = "allSpaces"
-    private var spaceObserver: NSObjectProtocol?
     private let commandTabGuard = CommandTabGuard()
-    private let permissionWindow = PermissionWindowController()
+    private lazy var permissionsWindow: HostingWindow<PermissionsView> = HostingWindow(title: { String(localized: "WinTab – Permissions") }) {
+        [unowned self] in
+        PermissionsView(status: status) { [unowned self] in permissionsWindow.close() }
+    }
+    private lazy var settingsWindow: HostingWindow<SettingsView> = HostingWindow(title: { String(localized: "WinTab Settings") }) {
+        [unowned self] in SettingsView(settings: settings, status: status)
+    }
+    /// The permissions window was shown once (on the very first launch).
+    private static let onboardedKey = "onboardingShown"
+    private var appliedShortcut: ShortcutChoice?
     private var statusItem: NSStatusItem?
+    private var spaceObserver: NSObjectProtocol?
     private var monitorTask: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -29,14 +34,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.setActivationPolicy(.accessory)
         // WinTab has no windows most of the time; macOS must not quit it for that ("automatic termination").
         ProcessInfo.processInfo.disableAutomaticTermination("WinTab listens for its keyboard shortcut")
-        switcher.setPreviews(previewsWanted && ScreenRecordingPermission.isGranted)
-        switcher.showsAllSpaces = UserDefaults.standard.object(forKey: Self.allSpacesDefaultsKey) as? Bool ?? true
+        applySettings()
+        settings.onChange = { [unowned self] in applySettings() }
         if runDebugCommand() { return }
         SystemAppSwitcher.installSignalHandlers()
         SystemAppSwitcher.startWatchdog()
         setUpStatusItem()
-        refreshState(showPermissionWindow: true)
-        askForScreenRecordingOnce()
+        refreshState()
+
+        let firstLaunch = !UserDefaults.standard.bool(forKey: Self.onboardedKey)
+        if !status.accessibility || (firstLaunch && settings.previews && !status.screenRecording) {
+            permissionsWindow.show()
+        }
+        UserDefaults.standard.set(true, forKey: Self.onboardedKey)
+
         spaceObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.switcher.prefetchOtherSpaces() }
@@ -45,7 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         monitorTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
-                self?.refreshState(showPermissionWindow: false)
+                self?.refreshState()
             }
         }
     }
@@ -57,11 +68,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     // MARK: - State
 
-    /// Starts or stops the keyboard tap and focus tracking with the Accessibility permission and decides
-    /// whether the system ⌘Tab has to be off.
-    private func refreshState(showPermissionWindow: Bool) {
-        if AccessibilityPermission.isGranted {
-            if !keyboardTap.isInstalled, keyboardTap.start() { permissionWindow.close() }
+    /// Hands the settings to the switcher (called at launch and after every change in Settings).
+    private func applySettings() {
+        if appliedShortcut != settings.shortcut {
+            appliedShortcut = settings.shortcut
+            switcher.setHotkey(settings.shortcut.config)
+        }
+        switcher.showsAllSpaces = settings.allSpaces
+        switcher.listOptions = settings.listOptions
+        switcher.screenChoice = settings.screen
+        refreshState()
+        switcher.prefetchOtherSpaces()
+    }
+
+    /// Follows the permissions: starts or stops the keyboard tap and focus tracking, decides whether the system
+    /// ⌘Tab has to be off and whether previews are possible.
+    private func refreshState() {
+        let wasComplete = permissionsComplete
+        status.refresh()
+        if status.accessibility {
+            if !keyboardTap.isInstalled { keyboardTap.start() }
             if keyboardTap.isInstalled, !focusTracker.isRunning {
                 focusTracker.start()
                 switcher.prefetchOtherSpaces()
@@ -71,43 +97,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             switcher.perform(.cancel)
             keyboardTap.stop()
             focusTracker.stop()
-            permissionWindow.show()
-        } else if showPermissionWindow {
-            permissionWindow.show()
+            permissionsWindow.show()
         }
-        commandTabGuard.wantsCommandTab = shortcut.replacesSystemSwitcher && keyboardTap.isInstalled
+        // Everything the user wanted is allowed now – the onboarding has done its job.
+        if !wasComplete && permissionsComplete { permissionsWindow.close() }
+
+        commandTabGuard.wantsCommandTab = settings.shortcut.replacesSystemSwitcher && keyboardTap.isInstalled
         commandTabGuard.refreshSecureInput()
-        switcher.setPreviews(previewsWanted && ScreenRecordingPermission.isGranted)
+        let secureInputTakesOver = commandTabGuard.isSecureInputOn && commandTabGuard.wantsCommandTab
+        if status.secureInput != secureInputTakesOver { status.secureInput = secureInputTakesOver }
+        switcher.setPreviews(settings.previews && status.screenRecording)
     }
 
-    /// The first time previews are wanted without the permission, show the system prompt once
-    /// (once Accessibility is granted, so a new user doesn't get two permission requests at the same time).
-    private func askForScreenRecordingOnce() {
-        guard previewsWanted, !ScreenRecordingPermission.isGranted,
-              !UserDefaults.standard.bool(forKey: Self.askedScreenRecordingKey) else { return }
-        Task { [weak self] in
-            while !AccessibilityPermission.isGranted {
-                try? await Task.sleep(for: .seconds(2))
-                if self == nil { return }
-            }
-            UserDefaults.standard.set(true, forKey: Self.askedScreenRecordingKey)
-            ScreenRecordingPermission.request()
-        }
-    }
-
-    private func setPreviewsWanted(_ wanted: Bool) {
-        previewsWanted = wanted
-        UserDefaults.standard.set(wanted, forKey: Self.previewsDefaultsKey)
-        if wanted && !ScreenRecordingPermission.isGranted { allowScreenRecording() }
-        refreshState(showPermissionWindow: false)
-    }
-
-    private func setShortcut(_ choice: ShortcutChoice) {
-        guard choice != shortcut else { return }
-        shortcut = choice
-        UserDefaults.standard.set(choice.rawValue, forKey: Self.shortcutDefaultsKey)
-        switcher.setHotkey(choice.config)
-        refreshState(showPermissionWindow: false)
+    private var permissionsComplete: Bool {
+        status.accessibility && (status.screenRecording || !settings.previews)
     }
 
     // MARK: - Menu bar
@@ -121,84 +124,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem = item
     }
 
-    private static func name(of choice: ShortcutChoice) -> String {
-        switch choice {
-        case .commandTab: "⌘Tab"
-        case .optionTab: "⌥Tab"
-        }
-    }
-
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
         if keyboardTap.isInstalled {
-            menu.addItem(disabled: String(localized: "Press \(Self.name(of: shortcut)) to switch windows"))
-            if shortcut.replacesSystemSwitcher && commandTabGuard.isSecureInputOn {
+            let name = settings.shortcut == .commandTab ? "⌘Tab" : "⌥Tab"
+            menu.addItem(disabled: String(localized: "Press \(name) to switch windows"))
+            if status.secureInput {
                 menu.addItem(disabled: String(localized: "Secure input is on – ⌘Tab shows the system app switcher for now"))
             }
         } else {
             menu.addItem(disabled: String(localized: "Waiting for the Accessibility permission"))
-            menu.addItem(withTitle: String(localized: "Grant Accessibility Permission…"),
-                         action: #selector(showPermission), keyEquivalent: "").target = self
         }
         menu.addItem(.separator())
-
-        let shortcutMenu = NSMenu()
-        for choice in ShortcutChoice.allCases {
-            let title = switch choice {
-            case .commandTab: String(localized: "⌘Tab – replaces the system app switcher")
-            case .optionTab: String(localized: "⌥Tab – keeps the system ⌘Tab")
-            }
-            let item = shortcutMenu.addItem(withTitle: title, action: #selector(chooseShortcut(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = choice.rawValue
-            item.state = choice == shortcut ? .on : .off
+        menu.addItem(withTitle: String(localized: "Settings…"), action: #selector(showSettings), keyEquivalent: ",")
+            .target = self
+        if !permissionsComplete {
+            menu.addItem(withTitle: String(localized: "Permissions…"), action: #selector(showPermissions),
+                         keyEquivalent: "").target = self
         }
-        let shortcutItem = menu.addItem(withTitle: String(localized: "Shortcut"), action: nil, keyEquivalent: "")
-        shortcutItem.submenu = shortcutMenu
-
-        let previewsItem = menu.addItem(withTitle: String(localized: "Window Previews"),
-                                        action: #selector(togglePreviews), keyEquivalent: "")
-        previewsItem.target = self
-        previewsItem.state = previewsWanted ? .on : .off
-        if previewsWanted && !ScreenRecordingPermission.isGranted {
-            menu.addItem(withTitle: String(localized: "Allow Screen Recording for Previews…"),
-                         action: #selector(allowScreenRecording), keyEquivalent: "").target = self
-        }
-        let allSpacesItem = menu.addItem(withTitle: String(localized: "Windows from All Desktops"),
-                                         action: #selector(toggleAllSpaces), keyEquivalent: "")
-        allSpacesItem.target = self
-        allSpacesItem.state = switcher.showsAllSpaces ? .on : .off
         menu.addItem(.separator())
-
         menu.addItem(withTitle: String(localized: "About WinTab"), action: #selector(showAbout), keyEquivalent: "")
             .target = self
         menu.addItem(withTitle: String(localized: "Quit WinTab"), action: #selector(NSApplication.terminate(_:)),
                      keyEquivalent: "q")
     }
 
-    @objc private func chooseShortcut(_ sender: NSMenuItem) {
-        if let raw = sender.representedObject as? String, let choice = ShortcutChoice(rawValue: raw) {
-            setShortcut(choice)
-        }
+    @objc private func showSettings() {
+        status.refresh()
+        settingsWindow.show()
     }
 
-    @objc private func toggleAllSpaces() {
-        switcher.showsAllSpaces.toggle()
-        UserDefaults.standard.set(switcher.showsAllSpaces, forKey: Self.allSpacesDefaultsKey)
-        switcher.prefetchOtherSpaces()
-    }
-
-    @objc private func togglePreviews() {
-        setPreviewsWanted(!previewsWanted)
-    }
-
-    @objc private func allowScreenRecording() {
-        ScreenRecordingPermission.request()
-        ScreenRecordingPermission.openSettings()
-    }
-
-    @objc private func showPermission() {
-        permissionWindow.show()
+    @objc private func showPermissions() {
+        permissionsWindow.show()
     }
 
     @objc private func showAbout() {
@@ -218,6 +175,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     ///   app and its focused window afterwards and quits.
     private func runDebugCommand() -> Bool {
         let env = ProcessInfo.processInfo.environment
+        if let view = env["WINTAB_VIEW"], let path = env["WINTAB_SNAPSHOT"] {
+            // `WINTAB_VIEW=settings|permissions WINTAB_SNAPSHOT=/x.png`: image of that window's content.
+            let content: NSView = view == "settings"
+                ? NSHostingView(rootView: SettingsView(settings: settings, status: status))
+                : NSHostingView(rootView: PermissionsView(status: status) {})
+            content.setFrameSize(content.fittingSize)
+            content.layoutSubtreeIfNeeded()
+            if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                content.cacheDisplay(in: content.bounds, to: rep)
+                try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))
+            }
+            exit(0)
+        }
         if env["WINTAB_SPACES"] != nil {
             DebugSpaces.run()
             fflush(stdout)

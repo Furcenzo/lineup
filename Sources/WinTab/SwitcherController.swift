@@ -25,6 +25,9 @@ final class SwitcherController {
     private let remoteWindows = RemoteWindowSearch()
     /// List windows of all Spaces (desktops, fullscreen apps), not just the current one.
     var showsAllSpaces = true
+    /// Which windows to leave out (Settings).
+    var listOptions = ListOptions()
+    var screenChoice = SwitcherScreen.mouse
     private var prefetchTask: Task<Void, Never>?
     /// The window that had the focus last – captured when it loses the focus.
     private var lastFocusedID: CGWindowID?
@@ -96,7 +99,7 @@ final class SwitcherController {
             .flatMap { FocusTracker.focusedWindowID(of: $0.processIdentifier) }
         if let focusedID { recordFocus(windowID: focusedID) }
 
-        let unordered = WindowSource.currentWindows(remote: showsAllSpaces ? remoteWindows : nil)
+        let unordered = WindowSource.currentWindows(remote: showsAllSpaces ? remoteWindows : nil, options: listOptions)
         let byID = Dictionary(unordered.map { ($0.window.id, $0) }, uniquingKeysWith: { first, _ in first })
         handles = recent.order(unordered.map(\.window)).compactMap { byID[$0.id] }
 
@@ -129,7 +132,7 @@ final class SwitcherController {
         prefetchTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(300))
             guard let self, !Task.isCancelled, !machine.isActive else { return }
-            _ = WindowSource.currentWindows(remote: remoteWindows)
+            _ = WindowSource.currentWindows(remote: remoteWindows, options: listOptions)
         }
     }
 
@@ -143,7 +146,7 @@ final class SwitcherController {
             try? await Task.sleep(for: Self.showDelay)
             guard let self, !Task.isCancelled, machine.isActive else { return }
             loadIfPending()
-            panel.present()
+            panel.present(on: screenChoice)
         }
     }
 

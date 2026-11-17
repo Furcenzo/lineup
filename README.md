@@ -5,8 +5,22 @@
 A window switcher for macOS that works like **Alt+Tab on Windows**: it switches between *windows*, not apps.
 Free, minimal, no upsells. Available in English and Slovak (follows the macOS language setting).
 
-> **Status:** early development (milestone 4 of 5, see [PLAN.md](PLAN.md)). Settings window, launch at
-> login and a first release come next.
+## Download
+
+Get the latest **WinTab-x.y.z.zip** from [Releases](https://github.com/Furcenzo/wintab/releases/latest)
+(universal app for Apple silicon and Intel, macOS 15 or later), unzip it and move **WinTab.app** to
+/Applications.
+
+The app is not notarized by Apple, so macOS blocks the first launch. Open
+**System Settings → Privacy & Security** and click **Open Anyway** next to “WinTab”, or run:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/WinTab.app"
+```
+
+On the first start WinTab asks for its permissions (see below). Because the app is not signed with an Apple
+Developer ID, macOS may forget the permissions after an update: remove WinTab from both lists in System
+Settings and allow it again.
 
 ## Usage
 
@@ -17,18 +31,24 @@ Free, minimal, no upsells. Available in English and Slovak (follows the macOS la
 - **Esc** – close without switching. A mouse click on a window switches to it.
 - Minimized windows are listed at the end and are restored when chosen; windows of hidden apps are shown too.
 
-WinTab lives in the menu bar (no Dock icon). Its menu has **Shortcut**: ⌘Tab (replaces the system app
-switcher, the default) or ⌥Tab (keeps the system ⌘Tab), and **Window Previews** (turn off to see app icons
-instead) and **Windows from All Desktops** (turn off to see only the current desktop). Quit WinTab from the same menu – the system ⌘Tab
-comes back as soon as WinTab quits, crashes or is force-quit (a small watchdog process, also called WinTab,
-takes care of that). In password fields and with Terminal's Secure Keyboard Entry macOS hides key presses
+WinTab lives in the menu bar (no Dock icon). **Settings…** (⌘,) in its menu:
+
+- **Shortcut** – ⌘Tab (replaces the system app switcher, the default) or ⌥Tab (keeps the system ⌘Tab),
+- **Windows** – previews (or app icons), windows from all desktops or only the current one, minimized windows,
+  windows of hidden apps, and on which screen the switcher appears,
+- **Excluded apps** – apps whose windows never show up,
+- **Open at login**, and the state of both permissions.
+
+Quit WinTab from the same menu – the system ⌘Tab comes back as soon as WinTab quits, crashes or is
+force-quit (a small watchdog process, also called WinTab, takes care of that). In password fields and with Terminal's Secure Keyboard Entry macOS hides key presses
 from all apps, so ⌘Tab shows the system app switcher there.
 
 ## Permissions
 
+On the first start a welcome window shows both permissions with **Allow…** buttons and their live state.
+
 - **Accessibility** (required) – to notice the shortcut, read the list of windows and bring the chosen one to
-  the front. On the first start WinTab shows a window with a button to
-  **System Settings → Privacy & Security → Accessibility**; turn WinTab on there.
+  the front: **System Settings → Privacy & Security → Accessibility**.
 - **Screen & System Audio Recording** (optional) – for window previews. macOS asks once; turn WinTab on in
   **System Settings → Privacy & Security → Screen & System Audio Recording** and let macOS quit and reopen it.
   Without it WinTab shows app icons. macOS may ask from time to time to confirm this permission again.
@@ -71,7 +91,8 @@ survives rebuilds. The certificate only works on your Mac; remove it any time in
 The binary inside the bundle accepts environment variables (output on stdout):
 
 - `WINTAB_LIST=1` – print the windows the switcher would offer and quit,
-- `WINTAB_SNAPSHOT=/path.png` – save an image of the switcher overlay and quit (no screen recording needed),
+- `WINTAB_SNAPSHOT=/path.png` – save an image of the switcher overlay and quit (no screen recording needed;
+  with `WINTAB_VIEW=settings` or `permissions` an image of that window),
 - `WINTAB_SWITCH=<n>` – switch to the n-th window of the list and print which window is in front afterwards,
 - `WINTAB_CYCLE=<n>` – open, move and close the switcher overlay n times (smoke test) and quit,
 - `WINTAB_SPACES=1` – print the desktops (Spaces), the windows on them and what the private APIs find.

@@ -7,6 +7,8 @@
 #   UNIVERSAL=1        build for both Apple silicon and Intel (used for public releases)
 #   SIGN_IDENTITY=…    code signing identity; default: "WinTab Local Dev" when it exists in the keychain
 #                      (see scripts/setup-dev-signing.sh), otherwise ad-hoc ("-")
+#   OUTPUT_DIR=…       where WinTab.app goes (default build; releases use build/release so they don't
+#                      replace the development app the permissions belong to)
 #
 # Why the signature matters: macOS remembers the Accessibility permission per code signature. With an
 # ad-hoc signature every build looks like a new app and the permission has to be granted again.
@@ -32,7 +34,7 @@ fi
 swift build -c release "${ARCH_FLAGS[@]}"
 BIN="$(swift build -c release "${ARCH_FLAGS[@]}" --show-bin-path)/WinTab"
 
-APP="build/WinTab.app"
+APP="${OUTPUT_DIR:-build}/WinTab.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp -f "$BIN" "$APP/Contents/MacOS/WinTab"

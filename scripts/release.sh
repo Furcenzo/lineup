@@ -33,10 +33,10 @@ fi
 swift test
 ./scripts/check-localization.sh
 # Public builds are ad-hoc signed: the local "WinTab Local Dev" certificate is only for this Mac.
-VERSION="$VERSION" UNIVERSAL=1 SIGN_IDENTITY=- ./scripts/build-app.sh
+VERSION="$VERSION" UNIVERSAL=1 SIGN_IDENTITY=- OUTPUT_DIR=build/release ./scripts/build-app.sh
 
 rm -f "$ZIP"
-ditto -c -k --sequesterRsrc --keepParent "build/WinTab.app" "$ZIP"
+ditto -c -k --sequesterRsrc --keepParent "build/release/WinTab.app" "$ZIP"
 SHA="$(shasum -a 256 "$ZIP" | cut -d' ' -f1)"
 echo "Release archive: $PWD/$ZIP"
 echo "SHA-256: $SHA"
@@ -59,7 +59,11 @@ $CHANGES
    **System Settings → Privacy & Security** and click **Open Anyway** next to “WinTab”, or run:
    \`xattr -dr com.apple.quarantine "/Applications/WinTab.app"\`
 
-3. Start WinTab and allow it in **System Settings → Privacy & Security → Accessibility**.
+3. Start WinTab – its window guides you through the permissions: **Accessibility** (required) and
+   **Screen & System Audio Recording** (optional, for window previews).
+
+WinTab replaces ⌘Tab with a window switcher (Settings can switch it to ⌥Tab). After updating WinTab, macOS
+may ask for the permissions again: remove WinTab from both lists in System Settings and allow it anew.
 
 SHA-256: \`$SHA\`
 EOF

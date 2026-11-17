@@ -105,14 +105,26 @@ Space lists; AX only reports the current Space); a switcher that is already open
 background search finds more windows; AltTab's newer `SLSWindowQueryWindows` batch API and WindowServer
 notifications could replace polling-style refreshes.
 
-### 5. Polish and release
+### 5. Polish and release ✅ (2026-11-17)
 
-- Permission onboarding (Accessibility, Screen Recording) in one window with live status.
-- Launch at login: `SMAppService.mainApp.register()` (toggle in settings).
-- Settings window: ⌘Tab vs ⌥Tab, excluded apps, show minimized / hidden windows, show windows of all
-  Spaces vs current Space, which screen shows the switcher.
-- Localization stays EN + SK for every new text (`scripts/check-localization.sh`).
-- `CHANGELOG.md`, `scripts/release.sh <version> --publish` (GitHub Release, ad-hoc signed – not notarized).
+- Settings window (menu bar → Settings…, ⌘,; `SettingsView` + `AppSettings` in UserDefaults): shortcut
+  ⌘Tab / ⌥Tab, window previews, windows from all desktops, minimized windows, windows of hidden apps
+  (`ListOptions` in WinTabCore, tested), excluded apps (by bundle ID, chosen with an open panel), switcher on
+  the screen with the mouse pointer or the main screen, open at login, permissions with live state.
+- Open at login: `SMAppService.mainApp` (`LoginItem`); "needs approval" links to System Settings → Login Items.
+  It registers the bundle at its current path – re-enable it after moving WinTab.app (e.g. to /Applications).
+- Permission onboarding (`PermissionsView`): shown when Accessibility is missing, and on the first launch when
+  Screen Recording is missing; both rows with live state; closes by itself once everything is allowed.
+- The menu bar menu is down to: status, Settings…, Permissions… (only while something is missing), About, Quit.
+- Release prep: `CHANGELOG.md` has `## 0.1.0`; `scripts/release.sh 0.1.0` builds an ad-hoc signed universal
+  app into `build/release/` (not over the development app) and `build/WinTab-0.1.0.zip`. Not published –
+  creating the GitHub repository (assumed `Furcenzo/wintab` in `release.sh` / README) and
+  `./scripts/release.sh 0.1.0 --publish` are up to the user.
+
+Ideas for later: an app icon (the app has none yet), refreshing an open switcher when the background search
+finds more windows, hidden-app windows on other Spaces, WindowServer notifications instead of polling,
+keyboard shortcuts inside the switcher (Q quit, W close, M minimize), a notarized release once there is an
+Apple Developer ID (permissions would then survive updates).
 
 ## Technical notes
 
@@ -130,14 +142,16 @@ notifications could replace polling-style refreshes.
 - **SwiftUI overlay:** never look items up by index inside `ForEach` (`model.items[index]`) – SwiftUI may
   evaluate a row of the old list after the list changed, which crashed milestone 1 on closing the switcher.
   Pass the item values into the views.
-- **Debugging without a keyboard/screen recording:** `WINTAB_LIST=1`, `WINTAB_SNAPSHOT=/x.png`,
+- **Debugging without a keyboard/screen recording:** `WINTAB_LIST=1`, `WINTAB_SNAPSHOT=/x.png`
+  (`WINTAB_VIEW=settings|permissions` renders those windows instead),
   `WINTAB_SWITCH=<n>`, `WINTAB_CYCLE=<n>` (open/close smoke test) – see `main.swift` / README. Crash
   reports: `~/Library/Logs/DiagnosticReports/WinTab-*.ips`.
-- Milestones 1–4 were verified on macOS 27.0 (MacBook Air) by the user: listing, switching between
+- Milestones 1–5 were verified on macOS 27.0 (MacBook Air) by the user: listing, switching between
   windows of the same app, Tab / ⇧Tab / Esc / quick flip / mouse click / minimized windows, ⌘Tab replacing
   the system switcher, switching the shortcut in the menu, ⌘Tab back to the system after Quit, previews
 (thumbnails, minimized windows, turning previews off) without noticeable delay, windows on other desktops
-and a fullscreen app (listed, switched to the exact window), turning all desktops off. The ⌘Tab
+and a fullscreen app (listed, switched to the exact window), turning all desktops off, every setting in
+the Settings window, excluded apps, open at login. The ⌘Tab
   restore after SIGKILL / SIGTERM / `pkill` was checked with `CGSIsSymbolicHotKeyEnabled`.
 - **Logging:** `log stream --level debug --predicate 'subsystem == "io.github.furcenzo.wintab"'` shows focus
   changes, listed windows and thumbnail capture times.

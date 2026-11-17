@@ -84,15 +84,21 @@ final class SwitcherPanel: NSPanel {
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
 
-    /// The screen with the mouse pointer – where the switcher appears.
-    static var currentScreen: NSScreen? {
-        NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }
-            ?? NSScreen.main ?? NSScreen.screens.first
+    /// The screen the switcher appears on.
+    static func screen(for choice: SwitcherScreen) -> NSScreen? {
+        switch choice {
+        case .mouse:
+            NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }
+                ?? NSScreen.main ?? NSScreen.screens.first
+        case .primary:
+            // The first screen is the one with the menu bar in System Settings → Displays.
+            NSScreen.screens.first
+        }
     }
 
-    /// Sizes the panel for the current items and shows it centered on the screen with the mouse pointer.
-    func present() {
-        guard let screen = Self.currentScreen else { return }
+    /// Sizes the panel for the current items and shows it centered on the chosen screen.
+    func present(on choice: SwitcherScreen = .mouse) {
+        guard let screen = Self.screen(for: choice) else { return }
         layout(for: screen.visibleFrame)
         let size = hostingView.fittingSize
         let frame = screen.visibleFrame

@@ -162,4 +162,30 @@ import Testing
                                                        appPIDs: [10, 20])
         #expect(result == [10: [2], 20: [6]])
     }
+
+    @Test func optionsLeaveOutMinimizedHiddenAndExcluded() {
+        let finder = AppInfo(pid: 10, name: "Finder", bundleID: "com.apple.finder")
+        let notes = AppInfo(pid: 30, name: "Notes", isHidden: true, bundleID: "com.apple.Notes")
+        let mail = AppInfo(pid: 40, name: "Mail", bundleID: "com.apple.mail")
+        let onScreen = [OnScreenWindow(windowID: 1, pid: 10, bounds: frame(0)),
+                        OnScreenWindow(windowID: 4, pid: 40, bounds: frame(0))]
+        let axWindows = [
+            ax(0, id: 1, pid: 10, title: "Desktop"),
+            ax(1, id: 2, pid: 10, title: "Minimized", minimized: true),
+            ax(2, id: 3, pid: 30, title: "Hidden"),
+            ax(3, id: 4, pid: 40, title: "Inbox"),
+        ]
+        let apps = [finder, notes, mail]
+        func titles(_ options: ListOptions) -> [String] {
+            WindowListBuilder.build(onScreen: onScreen, axWindows: axWindows, apps: apps, options: options).map(\.title)
+        }
+        #expect(titles(ListOptions()) == ["Desktop", "Inbox", "Hidden", "Minimized"])
+        #expect(titles(ListOptions(includeMinimized: false)) == ["Desktop", "Inbox", "Hidden"])
+        #expect(titles(ListOptions(includeHiddenApps: false)) == ["Desktop", "Inbox", "Minimized"])
+        #expect(titles(ListOptions(excludedBundleIDs: ["com.apple.mail"])) == ["Desktop", "Hidden", "Minimized"])
+    }
+
+    @Test func appsWithoutBundleIDAreNeverExcluded() {
+        #expect(ListOptions(excludedBundleIDs: ["x"]).includes(AppInfo(pid: 1, name: "Script")))
+    }
 }

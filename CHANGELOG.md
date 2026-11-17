@@ -5,14 +5,18 @@ version into the GitHub Release notes, so add a section before publishing.
 
 ## Unreleased
 
-- Window switcher on `⌘ Tab` (replaces the system app switcher) for the windows of the current desktop:
-  app icon and window title, Tab / arrows / ⇧Tab to move, release ⌘ to switch, Esc to cancel, mouse click to
-  switch. Minimized windows and hidden apps are restored when chosen.
+## 0.1.0
+
+- Window switcher on `⌘ Tab` (replaces the system app switcher) – like Alt+Tab on Windows it switches
+  windows, not apps: window previews with the app icon, Tab / arrows / ⇧Tab to move, release ⌘ to switch,
+  Esc to cancel, mouse click to switch. A quick ⌘Tab flips to the previous window.
 - Windows from all desktops (Spaces) and fullscreen apps; choosing one switches to its desktop and to exactly
-  that window, also between several windows of one app. Menu bar → Windows from All Desktops turns it off.
-- Window previews (needs the Screen Recording permission; menu bar → Window Previews turns them off).
+  that window, also between several windows of one app. Minimized windows and hidden apps are restored.
 - Windows are ordered by when you last used them; minimized windows come last.
-- Menu bar → Shortcut: switch to `⌥ Tab` to keep the system ⌘Tab. The system ⌘Tab always comes back when
-  WinTab quits, and works in password fields.
-- Menu bar icon (no Dock icon) and a guide for the Accessibility permission.
+- `⌥ Tab` instead, if you want to keep the system ⌘Tab. The system ⌘Tab always comes back when WinTab quits,
+  and works in password fields.
+- Settings (menu bar → Settings…, ⌘,): shortcut, previews, all desktops, minimized windows, windows of hidden
+  apps, excluded apps, which screen shows the switcher, open at login.
+- A welcome window guides you through the Accessibility and Screen Recording permissions and shows their state.
+- Menu bar icon only, no Dock icon.
 - English and Slovak user interface.
