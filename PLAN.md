@@ -150,7 +150,8 @@ Apple Developer ID (permissions would then survive updates).
 `io.github.furcenzo.lineup` (+ `.dev`), `LINEUP_*` debug variables, log subsystem, the signing certificate
 "Lineup Local Dev", GitHub repo `Furcenzo/lineup`, cask `lineup`. Migration: the old defaults domain is copied
 once (`AppSettings.migrateLegacyDefaults`), a running WinTab is quit at launch, the tap's `cask_renames.json`
-maps `wintab` → `lineup`. Permissions and the login item can't be carried over (new bundle ID) – the user
+maps `wintab` → `lineup` (but Homebrew's per-cask trust doesn't follow the rename – users switch with
+`brew install --cask furcenzo/tap/lineup`, which migrates the old installation). Permissions and the login item can't be carried over (new bundle ID) – the user
 allows them again. The `WT*` prefix in `CPrivate` stayed (internal).
 
 ## Technical notes

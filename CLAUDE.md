@@ -20,8 +20,9 @@ notes and risks; update it when a milestone is done or the plan changes.
 
 **Formerly WinTab** (renamed in 0.2.0 because of the Wacom "Wintab" API; bundle ID was
 `io.github.furcenzo.wintab`). `AppSettings.migrateLegacyDefaults()` copies the old defaults once and
-`SystemAppSwitcher.quitLegacyApp()` quits a still running WinTab; the tap's `cask_renames.json` moves
-`wintab` cask users to `lineup`. Keep these until nobody runs WinTab any more.
+`SystemAppSwitcher.quitLegacyApp()` quits a still running WinTab; the tap's `cask_renames.json` maps
+`wintab` to `lineup` (users still run `brew install --cask furcenzo/tap/lineup` once: Homebrew's per-cask
+trust doesn't follow renames, so `brew upgrade` skips it). Keep these until nobody runs WinTab any more.
 
 **Never leave the system ⌘Tab turned off.** Its state is global and outlives Lineup. Any code path that
 stops Lineup's keyboard tap must let `CommandTabGuard` turn it back on. If it ever stays off during

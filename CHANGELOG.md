@@ -7,8 +7,9 @@ version into the GitHub Release notes, so add a section before publishing.
 
 ## 0.2.0
 
-- **WinTab is now Lineup.** The old name clashed with the Wintab tablet API. Homebrew users get Lineup with
-  `brew upgrade` (the `wintab` cask moves to `lineup`). Your settings come along, but macOS sees a new app:
+- **WinTab is now Lineup.** The old name clashed with the Wintab tablet API. Homebrew users switch once with
+  `brew install --cask furcenzo/tap/lineup` – it replaces the `wintab` cask (Homebrew trusts third-party
+  casks by name, so `brew upgrade` alone skips the renamed one). Your settings come along, but macOS sees a new app:
   allow Accessibility (and Screen Recording for previews) again, turn on Open at Login in Settings again if
   you used it, and remove WinTab from those lists in System Settings. A WinTab that still runs is quit.
 

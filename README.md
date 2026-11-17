@@ -7,8 +7,9 @@
 A window switcher for macOS that works like **Alt+Tab on Windows**: it switches between *windows*, not apps.
 Free, minimal, no upsells. Available in English and Slovak (follows the macOS language setting).
 
-*Formerly called **WinTab**.* Upgrading from WinTab: `brew upgrade` moves the cask over by itself (or download
-Lineup and delete WinTab.app). Lineup takes over WinTab's settings, but macOS treats it as a new app – allow
+*Formerly called **WinTab**.* Upgrading from WinTab: run `brew install --cask furcenzo/tap/lineup` once – it
+replaces the `wintab` cask (Homebrew trusts third-party casks by name, so `brew upgrade` alone skips the renamed
+one) – or download Lineup and delete WinTab.app. Lineup takes over WinTab's settings, but macOS treats it as a new app – allow
 Accessibility (and Screen Recording) again, turn on Open at Login in Settings again if you used it, and remove
 WinTab from those lists in System Settings.
 
