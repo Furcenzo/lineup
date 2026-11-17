@@ -51,7 +51,8 @@ Settings and allow it again.
 - **Esc** – close without switching. A mouse click on a window switches to it.
 - Minimized windows are listed at the end and are restored when chosen; windows of hidden apps are shown too.
 
-WinTab lives in the menu bar (no Dock icon). **Settings…** (⌘,) in its menu:
+WinTab lives in the menu bar (no Dock icon). **Settings…** (⌘,) in its menu – or open WinTab again (Finder,
+Spotlight) while it runs, e.g. when a menu bar manager or the notch hides its icon:
 
 - **Shortcut** – ⌘Tab (replaces the system app switcher, the default) or ⌥Tab (keeps the system ⌘Tab),
 - **Windows** – previews (or app icons), windows from all desktops or only the current one, minimized windows,

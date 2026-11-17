@@ -5,6 +5,9 @@ version into the GitHub Release notes, so add a section before publishing.
 
 ## Unreleased
 
+- Opening WinTab again (Finder, Spotlight) while it runs shows its Settings – handy when the menu bar icon
+  is hidden.
+
 ## 0.1.1
 
 - A click outside the switcher closes it without switching, like Esc ([#1](https://github.com/Furcenzo/wintab/issues/1)).

@@ -78,10 +78,12 @@ final class SystemStatus {
     /// Secure input is on and the system ⌘Tab took over meanwhile.
     var secureInput = false
 
-    func refresh() {
+    /// `loginItem`: also ask SMAppService (an IPC round trip) – only while Settings is open.
+    func refresh(loginItem includeLoginItem: Bool = true) {
         // Assign only changes – every assignment would redraw the observing views.
         if accessibility != AccessibilityPermission.isGranted { accessibility.toggle() }
         if screenRecording != ScreenRecordingPermission.isGranted { screenRecording.toggle() }
+        guard includeLoginItem else { return }
         let login = LoginItem.status
         if loginItem != login { loginItem = login }
     }

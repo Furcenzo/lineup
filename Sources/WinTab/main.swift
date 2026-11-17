@@ -64,6 +64,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    /// Opening WinTab again (Finder, Spotlight, Launchpad) while it runs shows Settings – the way in when its
+    /// menu bar icon is hidden (by a menu bar manager, the notch or System Settings → Menu Bar).
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showSettings()
+        return false
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         keyboardTap.stop()
         SystemAppSwitcher.setEnabled(true)
@@ -93,7 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// ⌘Tab has to be off and whether previews are possible.
     private func refreshState() {
         let wasComplete = permissionsComplete
-        status.refresh()
+        status.refresh(loginItem: settingsWindow.isVisible)
         if status.accessibility {
             if !keyboardTap.isInstalled { keyboardTap.start() }
             if keyboardTap.isInstalled, !focusTracker.isRunning {
@@ -197,6 +204,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 content.cacheDisplay(in: content.bounds, to: rep)
                 try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))
             }
+            exit(0)
+        }
+        if env["WINTAB_MENUBAR"] != nil {
+            // Where are the menu bar icons of the other running WinTab processes (hidden by a menu bar manager,
+            // behind the notch…)? Needs the Accessibility permission, which the bundle has.
+            // `WINTAB_MENUBAR=<pid>` checks another app instead (to compare).
+            let apps = Int32(env["WINTAB_MENUBAR"] ?? "").flatMap { NSRunningApplication(processIdentifier: $0) }.map { [$0] }
+                ?? NSRunningApplication.runningApplications(withBundleIdentifier: SystemAppSwitcher.bundleID)
+            for app in apps where app.processIdentifier != ProcessInfo.processInfo.processIdentifier {
+                let extras = AXUIElementCreateApplication(app.processIdentifier).value("AXExtrasMenuBar")
+                let items = extras.map { ($0 as! AXUIElement).array(kAXChildrenAttribute) } ?? []
+                print("\(app.localizedName ?? "?") pid \(app.processIdentifier) at \(app.bundleURL?.path ?? "?"): \(items.count) menu bar item(s)")
+                for item in items { print("  frame: \(item.frame.map { "\($0)" } ?? "?")") }
+            }
+            if let screen = NSScreen.main {
+                print("Screen width: \(screen.frame.width), notch area: \(screen.auxiliaryTopLeftArea ?? .zero) / \(screen.auxiliaryTopRightArea ?? .zero)")
+            }
+            fflush(stdout)
             exit(0)
         }
         if env["WINTAB_SPACES"] != nil {
