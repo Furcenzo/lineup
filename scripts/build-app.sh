@@ -7,6 +7,10 @@
 #   UNIVERSAL=1        build for both Apple silicon and Intel (used for public releases)
 #   SIGN_IDENTITY=…    code signing identity; default: "WinTab Local Dev" when it exists in the keychain
 #                      (see scripts/setup-dev-signing.sh), otherwise ad-hoc ("-")
+#   CHANNEL=release    the real app (bundle ID io.github.furcenzo.wintab, name WinTab) – used by release.sh
+#                      and install-local.sh. Default "dev": bundle ID io.github.furcenzo.wintab.dev, name
+#                      "WinTab Dev", so development builds never stand in for the installed app (login item,
+#                      Spotlight, LaunchServices pick an app by its bundle ID) and keep their own permissions.
 #   OUTPUT_DIR=…       where WinTab.app goes (default build; releases use build/release so they don't
 #                      replace the development app the permissions belong to)
 #
@@ -50,14 +54,21 @@ for lproj in Sources/WinTab/Resources/*.lproj; do
 done
 
 VERSION="${VERSION:-0.1.0}"
+if [[ "${CHANNEL:-dev}" == "release" ]]; then
+    BUNDLE_ID="io.github.furcenzo.wintab"
+    DISPLAY_NAME="WinTab"
+else
+    BUNDLE_ID="io.github.furcenzo.wintab.dev"
+    DISPLAY_NAME="WinTab Dev"
+fi
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleName</key><string>WinTab</string>
-    <key>CFBundleDisplayName</key><string>WinTab</string>
-    <key>CFBundleIdentifier</key><string>io.github.furcenzo.wintab</string>
+    <key>CFBundleName</key><string>${DISPLAY_NAME}</string>
+    <key>CFBundleDisplayName</key><string>${DISPLAY_NAME}</string>
+    <key>CFBundleIdentifier</key><string>${BUNDLE_ID}</string>
     <key>CFBundleExecutable</key><string>WinTab</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
@@ -77,4 +88,4 @@ PLIST
 
 plutil -lint -s "$APP/Contents/Info.plist"
 codesign --force --sign "$SIGN_IDENTITY" "$APP" >/dev/null
-echo "Done: $PWD/$APP (signed: $SIGN_IDENTITY)"
+echo "Done: $PWD/$APP ($BUNDLE_ID, signed: $SIGN_IDENTITY)"

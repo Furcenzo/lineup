@@ -213,7 +213,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             // `=all` lists every app with menu bar items.
             let apps = env["WINTAB_MENUBAR"] == "all" ? NSWorkspace.shared.runningApplications
                 : Int32(env["WINTAB_MENUBAR"] ?? "").flatMap { NSRunningApplication(processIdentifier: $0) }.map { [$0] }
-                ?? NSRunningApplication.runningApplications(withBundleIdentifier: SystemAppSwitcher.bundleID)
+                ?? SystemAppSwitcher.bundleIDs.flatMap(NSRunningApplication.runningApplications(withBundleIdentifier:))
             for app in apps where app.processIdentifier != ProcessInfo.processInfo.processIdentifier {
                 let extras = AXUIElementCreateApplication(app.processIdentifier).value("AXExtrasMenuBar")
                 let items = extras.map { ($0 as! AXUIElement).array(kAXChildrenAttribute) } ?? []

@@ -88,7 +88,8 @@ swift build
 swift test
 ```
 
-Build the app into `build/WinTab.app` (and restart it):
+Build the app into `build/WinTab.app` (and restart it) – development builds are called **WinTab Dev**
+(their own bundle ID, settings and permissions), so they never get mixed up with an installed WinTab:
 
 ```bash
 ./scripts/run.sh

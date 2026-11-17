@@ -54,7 +54,7 @@ enum SystemAppSwitcher {
         let source = DispatchSource.makeProcessSource(identifier: parentPID, eventMask: .exit, queue: .main)
         source.setEventHandler {
             // A newly started WinTab (e.g. after a rebuild) has already taken over ⌘Tab – leave it alone.
-            let others = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).filter {
+            let others = bundleIDs.flatMap(NSRunningApplication.runningApplications(withBundleIdentifier:)).filter {
                 $0.processIdentifier != parentPID && !$0.isTerminated
             }
             if others.isEmpty { setEnabled(true) }
@@ -70,6 +70,8 @@ enum SystemAppSwitcher {
     }
 
     static let bundleID = "io.github.furcenzo.wintab"
+    /// The installed app and development builds ("WinTab Dev") – any of them may hold ⌘Tab.
+    static let bundleIDs = [bundleID, bundleID + ".dev"]
 }
 
 /// Decides whether the system switcher is on or off, and keeps it that way.

@@ -28,9 +28,16 @@ drawing, commit the regenerated files); `scripts/build-app.sh` copies the .icns 
 Build: `swift build`, tests: `swift test`, app bundle: `./scripts/build-app.sh` → `build/WinTab.app`,
 build + restart: `./scripts/run.sh [sk|en]`.
 
+**Development builds are "WinTab Dev"** (bundle ID `io.github.furcenzo.wintab.dev`, `CHANNEL=dev`, the default
+of `build-app.sh`); only `release.sh` and `install-local.sh` build the real `io.github.furcenzo.wintab`
+(`CHANNEL=release`) and they delete their staging copies afterwards. Reason: the login item, Spotlight and
+LaunchServices pick an app by bundle ID – a second copy with the real ID (e.g. `build/WinTab.app`) once made
+the login item start the dev build. "WinTab Dev" needs its own Accessibility / Screen Recording permissions
+(granted once); debug commands can also run against `/Applications/WinTab.app` (they never touch ⌘Tab).
+
 **The author's own installation:** `/Applications/WinTab.app` is managed by Homebrew (cask
 `furcenzo/tap/wintab`, adopted with `brew install --cask --adopt`) but contains a build signed with
-"WinTab Local Dev", so the permissions stay. `./scripts/run.sh` quits it while testing a dev build – start it
+"WinTab Local Dev", so the permissions stay. `./scripts/run.sh` quits it while testing a dev build ("WinTab Dev") – start it
 again with `open /Applications/WinTab.app`. After a release: `brew upgrade --cask wintab`, then
 `./scripts/install-local.sh` (puts a dev-signed build of the latest tag back; Homebrew only checks the version).
 

@@ -110,7 +110,7 @@ struct SettingsView: View {
         guard panel.runModal() == .OK else { return }
         for url in panel.urls {
             guard let bundleID = Bundle(url: url)?.bundleIdentifier,
-                  bundleID != SystemAppSwitcher.bundleID,
+                  !SystemAppSwitcher.bundleIDs.contains(bundleID),
                   !settings.excludedBundleIDs.contains(bundleID) else { continue }
             settings.excludedBundleIDs.append(bundleID)
         }

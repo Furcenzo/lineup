@@ -136,6 +136,11 @@ Apple Developer ID (permissions would then survive updates).
 - #2: × on the selected tile closes the window (`kAXCloseButtonAttribute` + `kAXPressAction`); with ⇧ held
   (`HotkeyStateMachine.isShiftHeld`) it turns red and force quits the app (`forceTerminate`). Tiles are removed
   with `Selection.remove(at:)` (tested) and the panel is resized.
+- Homebrew: `brew install --cask furcenzo/tap/wintab`; the author's copy is adopted (`--adopt`) and replaced
+  by a dev-signed build (`scripts/install-local.sh`). Development builds use the bundle ID
+  `io.github.furcenzo.wintab.dev` ("WinTab Dev") so the login item can't pick them instead of /Applications.
+- Menu bar icon "missing": on a notched MacBook macOS hides menu bar items that don't fit – not a WinTab bug.
+  Reopening WinTab (Spotlight) shows Settings; `WINTAB_MENUBAR=all` lists the visible items.
 - #3: README screenshots done (`Assets/screenshots/`, demo windows only, see CLAUDE.md); the showroom page on
   the author's website is still open (separate repository).
 

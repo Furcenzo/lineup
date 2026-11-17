@@ -21,10 +21,14 @@ fi
 security find-identity -v -p codesigning | grep -q '"WinTab Local Dev"' \
     || { echo "The \"WinTab Local Dev\" certificate is missing – run scripts/setup-dev-signing.sh first." >&2; exit 1; }
 
-VERSION="$VERSION" OUTPUT_DIR=build/install SIGN_IDENTITY="WinTab Local Dev" ./scripts/build-app.sh
+VERSION="$VERSION" CHANNEL=release OUTPUT_DIR=build/install SIGN_IDENTITY="WinTab Local Dev" ./scripts/build-app.sh
 # Quitting WinTab (SIGTERM) turns the system ⌘Tab back on; the new one takes it over again.
 pkill -x WinTab 2>/dev/null && sleep 1 || true
 rm -rf /Applications/WinTab.app
 ditto build/install/WinTab.app /Applications/WinTab.app
+# Keep /Applications the only app with the real bundle ID (the login item follows the bundle ID).
+LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+"$LSREGISTER" -u build/install/WinTab.app 2>/dev/null || true
+rm -rf build/install
 open /Applications/WinTab.app
 echo "Installed WinTab $VERSION (signed with WinTab Local Dev) into /Applications and started it."

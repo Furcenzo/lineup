@@ -34,11 +34,16 @@ fi
 swift test
 ./scripts/check-localization.sh
 # Public builds are ad-hoc signed: the local "WinTab Local Dev" certificate is only for this Mac.
-VERSION="$VERSION" UNIVERSAL=1 SIGN_IDENTITY=- OUTPUT_DIR=build/release ./scripts/build-app.sh
+VERSION="$VERSION" UNIVERSAL=1 CHANNEL=release SIGN_IDENTITY=- OUTPUT_DIR=build/release ./scripts/build-app.sh
 
 rm -f "$ZIP"
 ditto -c -k --sequesterRsrc --keepParent "build/release/WinTab.app" "$ZIP"
 SHA="$(shasum -a 256 "$ZIP" | cut -d' ' -f1)"
+# Only the zip is needed. A second WinTab.app with the real bundle ID left on disk could stand in for the
+# installed one (login item, Spotlight).
+LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+"$LSREGISTER" -u build/release/WinTab.app 2>/dev/null || true
+rm -rf build/release
 echo "Release archive: $PWD/$ZIP"
 echo "SHA-256: $SHA"
 
