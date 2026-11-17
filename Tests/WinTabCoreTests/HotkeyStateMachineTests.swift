@@ -114,4 +114,19 @@ import Testing
         #expect(!ShortcutChoice.optionTab.replacesSystemSwitcher)
         #expect(ShortcutChoice.optionTab.config == .optionTab)
     }
+
+    @Test func tracksShiftOnlyWhileOpen() {
+        var m = machine()
+        _ = m.handle(.modifiersChanged([.option, .shift]))
+        #expect(!m.isShiftHeld)
+        _ = m.handle(.keyDown(KeyCode.tab, .option))
+        #expect(!m.isShiftHeld)
+        _ = m.handle(.modifiersChanged([.option, .shift]))
+        #expect(m.isShiftHeld)
+        _ = m.handle(.modifiersChanged(.option))
+        #expect(!m.isShiftHeld)
+        _ = m.handle(.modifiersChanged([.option, .shift]))
+        _ = m.handle(.modifiersChanged(.shift))   // ⌥ released → switch, shift no longer counts
+        #expect(!m.isActive && !m.isShiftHeld)
+    }
 }

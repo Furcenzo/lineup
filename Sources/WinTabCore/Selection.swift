@@ -29,6 +29,22 @@ public struct Selection: Sendable, Equatable {
         index = newIndex
     }
 
+    /// An item was removed (its window closed, its app quit). The selection stays on the same item, or –
+    /// when that was the removed one – moves to the item that took its place (the previous one at the end).
+    public mutating func remove(at removed: Int) {
+        guard (0..<count).contains(removed) else { return }
+        count -= 1
+        guard let current = index, count > 0 else {
+            index = nil
+            return
+        }
+        if removed < current {
+            index = current - 1
+        } else if removed == current {
+            index = min(current, count - 1)
+        }
+    }
+
     private mutating func move(by offset: Int) {
         guard let current = index, count > 0 else { return }
         index = ((current + offset) % count + count) % count

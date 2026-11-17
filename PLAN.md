@@ -129,6 +129,15 @@ finds more windows, hidden-app windows on other Spaces, WindowServer notificatio
 keyboard shortcuts inside the switcher (Q quit, W close, M minimize), a notarized release once there is an
 Apple Developer ID (permissions would then survive updates).
 
+### After 0.1.0
+
+- #1: a click outside the switcher closes it (`NSEvent.addGlobalMonitorForEvents` for mouse-downs while it is
+  open – a global monitor only sees other apps' events, i.e. clicks that are not on the panel).
+- #2: × on the selected tile closes the window (`kAXCloseButtonAttribute` + `kAXPressAction`); with ⇧ held
+  (`HotkeyStateMachine.isShiftHeld`) it turns red and force quits the app (`forceTerminate`). Tiles are removed
+  with `Selection.remove(at:)` (tested) and the panel is resized.
+- #3 (open): screenshots for the README and a showroom page on the author's website.
+
 ## Technical notes
 
 - **Permissions are tied to the code signature.** TCC (Accessibility, Screen Recording) remembers an app by

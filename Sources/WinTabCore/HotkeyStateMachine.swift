@@ -99,6 +99,8 @@ public enum ShortcutChoice: String, Sendable, CaseIterable {
 public struct HotkeyStateMachine: Sendable {
     public var config: HotkeyConfig
     public private(set) var isActive = false
+    /// Shift is held while the switcher is open (the close buttons turn into "force quit").
+    public private(set) var isShiftHeld = false
     /// Keys whose keyDown was swallowed; their keyUp is swallowed too, even after the switcher closed,
     /// so the frontmost app never sees half a key press.
     private var swallowedKeys = Set<UInt16>()
@@ -108,6 +110,15 @@ public struct HotkeyStateMachine: Sendable {
     }
 
     public mutating func handle(_ event: KeyEvent) -> KeyEventResult {
+        let result = process(event)
+        switch event {
+        case let .keyDown(_, modifiers), let .keyUp(_, modifiers), let .modifiersChanged(modifiers):
+            isShiftHeld = isActive && modifiers.contains(.shift)
+        }
+        return result
+    }
+
+    private mutating func process(_ event: KeyEvent) -> KeyEventResult {
         switch event {
         case let .keyDown(code, modifiers):
             return isActive ? keyDownWhileActive(code, modifiers) : keyDownWhileInactive(code, modifiers)
@@ -127,6 +138,7 @@ public struct HotkeyStateMachine: Sendable {
     /// The switcher was closed from outside (mouse click, lost permission…).
     public mutating func deactivate() {
         isActive = false
+        isShiftHeld = false
     }
 
     private mutating func keyDownWhileInactive(_ code: UInt16, _ modifiers: Modifiers) -> KeyEventResult {

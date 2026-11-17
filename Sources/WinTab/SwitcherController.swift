@@ -34,6 +34,8 @@ final class SwitcherController {
     private var showTask: Task<Void, Never>?
     /// Set (to the `reverse` flag) while the window list of a just-opened switcher has not been read yet.
     private var pendingLoad: Bool?
+    /// Watches mouse clicks in other apps while the switcher is open (a click outside closes it).
+    private var outsideClickMonitor: Any?
 
     init(config: HotkeyConfig) {
         machine = HotkeyStateMachine(config: config)
@@ -45,6 +47,8 @@ final class SwitcherController {
             machine.deactivate()
             confirm()
         }
+        panel.model.onCloseWindow = { [weak self] index in self?.closeWindow(at: index) }
+        panel.model.onForceQuit = { [weak self] index in self?.forceQuitApp(at: index) }
     }
 
     var isOpen: Bool { machine.isActive }
@@ -79,6 +83,7 @@ final class SwitcherController {
     func handle(_ event: KeyEvent) -> Bool {
         let result = machine.handle(event)
         if let action = result.action { perform(action) }
+        if panel.model.isShiftHeld != machine.isShiftHeld { panel.model.isShiftHeld = machine.isShiftHeld }
         return result.swallow
     }
 
@@ -141,6 +146,19 @@ final class SwitcherController {
         // the keyboard of the whole system waits for it. Any later key event loads it first if needed.
         pendingLoad = reverse
         Task { [weak self] in self?.loadIfPending() }
+        // A click anywhere outside the switcher closes it without switching (like Esc). A global monitor only
+        // sees events of other apps – exactly the clicks that are not on the panel. The click itself still
+        // reaches the app under the pointer.
+        if outsideClickMonitor == nil {
+            outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(
+                matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self, self.machine.isActive else { return }
+                    log.debug("click outside – switcher closed")
+                    self.close()
+                }
+            }
+        }
         showTask?.cancel()
         showTask = Task { [weak self] in
             try? await Task.sleep(for: Self.showDelay)
@@ -173,7 +191,50 @@ final class SwitcherController {
         if let id = target.window.windowID { recordFocus(windowID: id) } else { recent.touch(target.window.id) }
     }
 
+    /// Closes one window with its own close button (through accessibility). The switcher stays open.
+    /// An app may still ask to save changes – its dialog shows up on that window.
+    private func closeWindow(at index: Int) {
+        guard handles.indices.contains(index) else { return }
+        let handle = handles[index]
+        if let button = handle.element.value(kAXCloseButtonAttribute),
+           CFGetTypeID(button) == AXUIElementGetTypeID() {
+            AXUIElementPerformAction(button as! AXUIElement, kAXPressAction as CFString)
+        }
+        log.debug("closed \(handle.window.id, privacy: .public)")
+        recent.remove(handle.window.id)
+        removeItems(at: [index])
+    }
+
+    /// Force quits the app that owns the window (⇧ held) – like Force Quit in the Apple menu, unsaved
+    /// changes are lost. All of the app's windows leave the list.
+    private func forceQuitApp(at index: Int) {
+        guard handles.indices.contains(index) else { return }
+        let pid = handles[index].window.pid
+        guard pid != ProcessInfo.processInfo.processIdentifier,
+              let app = NSRunningApplication(processIdentifier: pid) else { return }
+        log.debug("force quit \(app.localizedName ?? "?", privacy: .public)")
+        app.forceTerminate()
+        let indices = handles.indices.filter { handles[$0].window.pid == pid }
+        for i in indices { recent.remove(handles[i].window.id) }
+        removeItems(at: indices)
+    }
+
+    private func removeItems(at indices: [Int]) {
+        for index in indices.sorted(by: >) {
+            handles.remove(at: index)
+            selection.remove(at: index)
+        }
+        let removed = Set(indices)
+        panel.model.items = panel.model.items.enumerated().filter { !removed.contains($0.offset) }.map(\.element)
+        updateSelection()
+        // Fewer tiles – size and center the panel again.
+        if panel.isVisible { panel.present(on: screenChoice) }
+    }
+
     private func close() {
+        if let outsideClickMonitor { NSEvent.removeMonitor(outsideClickMonitor) }
+        outsideClickMonitor = nil
+        panel.model.isShiftHeld = false
         showTask?.cancel()
         showTask = nil
         pendingLoad = nil

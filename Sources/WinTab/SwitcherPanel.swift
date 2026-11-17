@@ -27,6 +27,12 @@ final class SwitcherModel {
     var onHover: (Int) -> Void = { _ in }
     /// Mouse click on an item.
     var onClick: (Int) -> Void = { _ in }
+    /// ⇧ is held: the close button on the selected tile force quits the app instead.
+    var isShiftHeld = false
+    /// The close button of an item (closes that window).
+    var onCloseWindow: (Int) -> Void = { _ in }
+    /// The close button with ⇧ held (force quits the item's app).
+    var onForceQuit: (Int) -> Void = { _ in }
 
     var metrics: TileMetrics { TileMetrics(previews: showsPreviews, scale: layout.scale) }
 
@@ -220,9 +226,32 @@ struct SwitcherView: View {
                 RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.accentColor, lineWidth: 2)
             }
         }
+        .overlay(alignment: .topLeading) {
+            // The selected tile (also the one under the mouse pointer) gets a close button.
+            if isSelected {
+                closeButton(index: index, item: item)
+                    .offset(x: -7, y: -7)
+            }
+        }
         .contentShape(Rectangle())
         .onHover { inside in if inside { model.onHover(index) } }
         .onTapGesture { model.onClick(index) }
+    }
+
+    /// × closes the window; with ⇧ held it turns red and force quits the whole app.
+    private func closeButton(index: Int, item: SwitcherModel.Item) -> some View {
+        let forceQuit = model.isShiftHeld
+        return Button {
+            if forceQuit { model.onForceQuit(index) } else { model.onCloseWindow(index) }
+        } label: {
+            Image(systemName: forceQuit ? "xmark.octagon.fill" : "xmark.circle.fill")
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(.white, forceQuit ? Color.red : Color.black.opacity(0.65))
+                .font(.system(size: 22))
+                .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+        }
+        .buttonStyle(.plain)
+        .help(forceQuit ? Text("Force Quit \(item.appName)") : Text("Close Window"))
     }
 
     /// Preview mode: the thumbnail with the app icon as a badge (or a big icon until there is a thumbnail).

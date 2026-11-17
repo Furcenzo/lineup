@@ -8,9 +8,11 @@
 "Allow WinTab in System Settings → General → Login Items." = "Povoľte WinTab v Systémové nastavenia → Všeobecné → Položky prihlásenia.";
 "Allowed" = "Povolené";
 "Allow…" = "Povoliť…";
+"Close Window" = "Zavrieť okno";
 "Done" = "Hotovo";
 "Exclude" = "Vylúčiť";
 "Excluded Apps" = "Vylúčené aplikácie";
+"Force Quit %@" = "Vynútiť ukončenie aplikácie %@";
 "General" = "Všeobecné";
 "Minimized" = "Minimalizované";
 "Minimized windows" = "Minimalizované okná";

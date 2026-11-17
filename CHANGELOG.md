@@ -5,6 +5,10 @@ version into the GitHub Release notes, so add a section before publishing.
 
 ## Unreleased
 
+- A click outside the switcher closes it without switching, like Esc ([#1](https://github.com/Furcenzo/wintab/issues/1)).
+- The selected window tile has a × button that closes the window; with ⇧ held it turns red and force quits the
+  app ([#2](https://github.com/Furcenzo/wintab/issues/2)).
+
 ## 0.1.0
 
 - Window switcher on `⌘ Tab` (replaces the system app switcher) – like Alt+Tab on Windows it switches
