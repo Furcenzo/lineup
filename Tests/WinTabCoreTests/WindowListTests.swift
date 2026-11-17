@@ -112,4 +112,54 @@ import Testing
         let list = WindowListBuilder.build(onScreen: onScreen, axWindows: axWindows, apps: [finder])
         #expect(list.map(\.title) == ["A"])
     }
+
+    @Test func windowsOnOtherSpacesComeAfterVisibleOnes() {
+        let onScreen = [OnScreenWindow(windowID: 1, pid: 10, bounds: frame(0))]
+        let otherSpaces = [
+            OnScreenWindow(windowID: 8, pid: 20, bounds: frame(0)),
+            OnScreenWindow(windowID: 9, pid: 10, bounds: frame(0)),
+        ]
+        let axWindows = [
+            ax(0, id: 9, pid: 10, title: "Finder elsewhere"),
+            ax(1, id: 1, pid: 10, title: "Here"),
+            ax(2, id: 8, pid: 20, title: "Fullscreen video"),
+            ax(3, id: 5, pid: 20, title: "Minimized", minimized: true),
+        ]
+        let list = WindowListBuilder.build(onScreen: onScreen, otherSpaces: otherSpaces, axWindows: axWindows,
+                                           apps: [finder, safari])
+        #expect(list.map(\.title) == ["Here", "Fullscreen video", "Finder elsewhere", "Minimized"])
+        #expect(list.map(\.isOnOtherSpace) == [false, true, true, false])
+    }
+
+    @Test func otherSpaceWindowsNeedTheirID() {
+        // Without a window ID there is no way to tell which Space a window is on.
+        let otherSpaces = [OnScreenWindow(windowID: 8, pid: 20, bounds: frame(0))]
+        let list = WindowListBuilder.build(onScreen: [], otherSpaces: otherSpaces,
+                                           axWindows: [ax(0, id: nil, pid: 20, title: "?", bounds: frame(0))],
+                                           apps: [safari])
+        #expect(list.isEmpty)
+    }
+
+    @Test func windowOnScreenWinsOverOtherSpaceEntry() {
+        // An app assigned to all Spaces shows up in both lists.
+        let window = OnScreenWindow(windowID: 1, pid: 10, bounds: frame(0))
+        let list = WindowListBuilder.build(onScreen: [window], otherSpaces: [window],
+                                           axWindows: [ax(0, id: 1, pid: 10, title: "Everywhere")], apps: [finder])
+        #expect(list.count == 1)
+        #expect(list[0].isOnOtherSpace == false)
+    }
+
+    @Test func windowsToLookUpSkipsKnownHelperAndForeignWindows() {
+        let otherSpaces = [
+            OnScreenWindow(windowID: 1, pid: 10, bounds: frame(0)),
+            OnScreenWindow(windowID: 2, pid: 10, bounds: frame(0)),
+            OnScreenWindow(windowID: 3, pid: 10, layer: 25, bounds: frame(0)),
+            OnScreenWindow(windowID: 4, pid: 77, bounds: frame(0)),
+            OnScreenWindow(windowID: 5, pid: 20, bounds: Rect(x: 0, y: 0, width: 1470, height: 20)),
+            OnScreenWindow(windowID: 6, pid: 20, bounds: frame(0)),
+        ]
+        let result = WindowListBuilder.windowsToLookUp(otherSpaces: otherSpaces, knownIDs: [1],
+                                                       appPIDs: [10, 20])
+        #expect(result == [10: [2], 20: [6]])
+    }
 }

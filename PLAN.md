@@ -74,20 +74,36 @@ can occasionally stay behind its sibling (public API only, see milestone 4).
   once automatically (`askedForScreenRecording`), only after Accessibility is granted. The permission is
   polled with the rest of the state every second (`CGPreflightScreenCaptureAccess`).
 
-### 4. All Spaces, minimized, fullscreen, precise focus (private APIs)
+### 4. All Spaces, minimized, fullscreen, precise focus (private APIs) ✅ (2026-11-17)
 
-- Windows on other Spaces: `kAXWindowsAttribute` only returns the current Space. AltTab's approach:
-  SkyLight / CGS private APIs (`CGSCopySpacesForWindows`, `CGSManagedDisplayGetCurrentSpace`,
-  `SLSCopyManagedDisplaySpaces`) to know which Space each window is on, plus the "remote token" trick –
-  `_AXUIElementCreateWithRemoteToken` with brute-forced element IDs – to get AX elements of windows on
-  other Spaces.
-- Fullscreen windows (each is its own Space) and minimized windows of all Spaces.
-- Precise switching to one window of another app: `_SLPSSetFrontProcessWithOptions(psn, windowID,
-  kCPSUserGenerated)` + `SLPSPostEventRecordTo` (make key window) like AltTab's `Window.focus()`; then
-  `AXRaise`. This also fixes the milestone 1 limit with multi-window apps.
-- Source: AltTab (GPL-3.0-or-later – compatible with WinTab's license). When code is taken over, keep
-  their copyright notice in the file header and add them to the README acknowledgments.
-- Put every private declaration into `Sources/CPrivate` and always keep a public-API fallback.
+- All private calls live in `Sources/CPrivate` (C, looked up with `dlsym` at run time, so a macOS without
+  them still launches – `WTPrivateAPIsAvailable()` reports it). Signatures, the key-window event record and
+  the remote token format come from AltTab (GPL-3.0; credited in the C file, the header and the README).
+- Windows of all Spaces: `CGSCopyManagedDisplaySpaces` (all Space IDs of all displays) →
+  `CGSCopyWindowsWithOptionsAndTags` (window IDs, option 2) → public `CGWindowListCreateDescriptionFromArray`
+  (pid, layer, bounds; the array must hold the raw window IDs, not CFNumbers) – `Spaces.windowsOnAllSpaces()`.
+- Accessibility elements of windows on other Spaces (`kAXWindowsAttribute` only has the current Space and
+  minimized windows): `RemoteWindowSearch` builds elements with `_AXUIElementCreateWithRemoteToken` for
+  element IDs 0, 1, 2… on a background queue (200 ms budget per app, retried at most every 5 s, resumes
+  where it stopped for the same windows), keeps only `AXWindow` roots and caches them per window ID. Found
+  windows are listed from the next opening on; searches start at launch, on every Space change and when the
+  switcher opens. Windows never found as AXWindow (toolbars / helper windows of fullscreen apps) stay out.
+  Measured on macOS 27: Windows App's fullscreen window found in 6–17 ms.
+- `WindowListBuilder.build(onScreen:otherSpaces:…)` (tested): order current Space → other Spaces → hidden
+  apps → minimized, then MRU. `SwitcherWindow.isOnOtherSpace`.
+- Precise focus: `WTFocusWindow` = `GetProcessForPID` + `_SLPSSetFrontProcessWithOptions(psn, wid,
+  kCPSUserGenerated)` + two `SLPSPostEventRecordTo` records (key window), then `AXRaise`. Switches the Space
+  when needed (also to fullscreen apps) and picks the exact window of multi-window apps. Falls back to the
+  milestone 1 public-API path.
+- Thumbnails of windows ScreenCaptureKit can't capture (fullscreen app on another Space) come from the private
+  `CGSHWCaptureWindowList`, scaled down (`WTCopyWindowImage`).
+- Menu bar → "Windows from All Desktops" (UserDefaults `allSpaces`, default on).
+- Debugging: `WINTAB_SPACES=1` prints Spaces, windows on all Spaces and what the remote token search finds.
+
+Not done / ideas: windows of hidden apps on other Spaces are not listed (they are ordered out and not in the
+Space lists; AX only reports the current Space); a switcher that is already open is not refreshed when a
+background search finds more windows; AltTab's newer `SLSWindowQueryWindows` batch API and WindowServer
+notifications could replace polling-style refreshes.
 
 ### 5. Polish and release
 
@@ -117,10 +133,11 @@ can occasionally stay behind its sibling (public API only, see milestone 4).
 - **Debugging without a keyboard/screen recording:** `WINTAB_LIST=1`, `WINTAB_SNAPSHOT=/x.png`,
   `WINTAB_SWITCH=<n>`, `WINTAB_CYCLE=<n>` (open/close smoke test) – see `main.swift` / README. Crash
   reports: `~/Library/Logs/DiagnosticReports/WinTab-*.ips`.
-- Milestones 1–3 were verified on macOS 27.0 (MacBook Air) by the user: listing, switching between
+- Milestones 1–4 were verified on macOS 27.0 (MacBook Air) by the user: listing, switching between
   windows of the same app, Tab / ⇧Tab / Esc / quick flip / mouse click / minimized windows, ⌘Tab replacing
   the system switcher, switching the shortcut in the menu, ⌘Tab back to the system after Quit, previews
-(thumbnails, minimized windows, turning previews off) without noticeable delay. The ⌘Tab
+(thumbnails, minimized windows, turning previews off) without noticeable delay, windows on other desktops
+and a fullscreen app (listed, switched to the exact window), turning all desktops off. The ⌘Tab
   restore after SIGKILL / SIGTERM / `pkill` was checked with `CGSIsSymbolicHotKeyEnabled`.
 - **Logging:** `log stream --level debug --predicate 'subsystem == "io.github.furcenzo.wintab"'` shows focus
   changes, listed windows and thumbnail capture times.

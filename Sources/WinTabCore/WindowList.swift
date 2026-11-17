@@ -73,11 +73,13 @@ public struct SwitcherWindow: Sendable, Equatable, Identifiable {
     public var title: String
     public var isMinimized: Bool
     public var isAppHidden: Bool
+    /// On another Space (desktop) or a fullscreen Space – switching to it switches the Space.
+    public var isOnOtherSpace: Bool
 
     public init(token: Int, windowID: UInt32?, pid: Int32, appName: String, title: String,
-                isMinimized: Bool = false, isAppHidden: Bool = false) {
+                isMinimized: Bool = false, isAppHidden: Bool = false, isOnOtherSpace: Bool = false) {
         self.token = token; self.windowID = windowID; self.pid = pid; self.appName = appName; self.title = title
-        self.isMinimized = isMinimized; self.isAppHidden = isAppHidden
+        self.isMinimized = isMinimized; self.isAppHidden = isAppHidden; self.isOnOtherSpace = isOnOtherSpace
     }
 
     /// Stable while the window exists (CGWindowID); windows without a known ID get a per-listing fallback.
@@ -95,36 +97,42 @@ public enum WindowListBuilder {
     /// Smaller on-screen windows are helper windows (status items, invisible trackers…).
     public static let minimumSize: Double = 30
 
-    /// Builds the list of windows on the current Space in the order the switcher shows them:
-    /// 1. visible windows, front to back (the order of `onScreen`),
-    /// 2. windows of hidden apps,
-    /// 3. minimized windows,
-    /// (2 and 3 keep the order of `apps`, then the app's own window order).
-    /// Windows without a switchable subrole, windows of `excludedPID` (WinTab itself) and AX windows
-    /// that are neither on screen, minimized nor hidden (they belong to another Space) are left out.
-    public static func build(onScreen: [OnScreenWindow], axWindows: [AXWindow], apps: [AppInfo],
-                             excludedPID: Int32? = nil) -> [SwitcherWindow] {
+    /// Builds the list of windows in the order the switcher shows them (before the most-recently-used order
+    /// is applied – for windows never seen focused this is the order they keep):
+    /// 1. visible windows of the current Space, front to back (the order of `onScreen`),
+    /// 2. windows on other Spaces (the order of `otherSpaces`),
+    /// 3. windows of hidden apps,
+    /// 4. minimized windows,
+    /// (3 and 4 keep the order of `apps`, then the app's own window order).
+    /// Windows without a switchable subrole, windows of `excludedPID` (WinTab itself) and AX windows found
+    /// in none of these groups are left out. With `otherSpaces` empty, only the current Space is listed.
+    public static func build(onScreen: [OnScreenWindow], otherSpaces: [OnScreenWindow] = [], axWindows: [AXWindow],
+                             apps: [AppInfo], excludedPID: Int32? = nil) -> [SwitcherWindow] {
         let appsByPID = Dictionary(apps.map { ($0.pid, $0) }, uniquingKeysWith: { first, _ in first })
         let appRank = Dictionary(apps.enumerated().map { ($1.pid, $0) }, uniquingKeysWith: { first, _ in first })
 
-        let candidates = onScreen.filter {
-            $0.layer == 0 && $0.alpha > 0 && $0.pid != excludedPID
-                && $0.bounds.width >= minimumSize && $0.bounds.height >= minimumSize
-        }
+        let candidates = switchCandidates(onScreen, excludedPID: excludedPID)
         var zIndexByID = [UInt32: Int]()
         for (index, window) in candidates.enumerated() where zIndexByID[window.windowID] == nil {
             zIndexByID[window.windowID] = index
         }
+        var otherIndexByID = [UInt32: Int]()
+        for (index, window) in switchCandidates(otherSpaces, excludedPID: excludedPID).enumerated()
+        where zIndexByID[window.windowID] == nil && otherIndexByID[window.windowID] == nil {
+            otherIndexByID[window.windowID] = index
+        }
 
         var visible = [(z: Int, window: SwitcherWindow)]()
+        var elsewhere = [(z: Int, window: SwitcherWindow)]()
         var hidden = [(rank: Int, order: Int, window: SwitcherWindow)]()
         var minimized = [(rank: Int, order: Int, window: SwitcherWindow)]()
         var usedZ = Set<Int>()
+        var usedOther = Set<Int>()
 
         for (order, ax) in axWindows.enumerated() {
             guard ax.pid != excludedPID, let subrole = ax.subrole, switchableSubroles.contains(subrole),
                   let app = appsByPID[ax.pid] else { continue }
-            let item = SwitcherWindow(token: ax.token, windowID: ax.windowID, pid: ax.pid, appName: app.name,
+            var item = SwitcherWindow(token: ax.token, windowID: ax.windowID, pid: ax.pid, appName: app.name,
                                       title: ax.title, isMinimized: ax.isMinimized, isAppHidden: app.isHidden)
             let rank = appRank[ax.pid] ?? Int.max
             if ax.isMinimized {
@@ -134,6 +142,10 @@ public enum WindowListBuilder {
             } else if let z = zIndex(of: ax, in: candidates, byID: zIndexByID, used: usedZ) {
                 usedZ.insert(z)
                 visible.append((z, item))
+            } else if let id = ax.windowID, let z = otherIndexByID[id], !usedOther.contains(z) {
+                usedOther.insert(z)
+                item.isOnOtherSpace = true
+                elsewhere.append((z, item))
             }
         }
 
@@ -142,8 +154,29 @@ public enum WindowListBuilder {
             (a.rank, a.order) < (b.rank, b.order)
         }
         return visible.sorted { $0.z < $1.z }.map(\.window)
+            + elsewhere.sorted { $0.z < $1.z }.map(\.window)
             + hidden.sorted(by: byAppThenOrder).map(\.window)
             + minimized.sorted(by: byAppThenOrder).map(\.window)
+    }
+
+    /// Windows on other Spaces whose accessibility element is not known yet, grouped by app – they have to
+    /// be looked up (remote token search) before they can be listed. Only apps in `appPIDs` count.
+    public static func windowsToLookUp(otherSpaces: [OnScreenWindow], knownIDs: Set<UInt32>, appPIDs: Set<Int32>,
+                                       excludedPID: Int32? = nil) -> [Int32: Set<UInt32>] {
+        var result = [Int32: Set<UInt32>]()
+        for window in switchCandidates(otherSpaces, excludedPID: excludedPID)
+        where appPIDs.contains(window.pid) && !knownIDs.contains(window.windowID) {
+            result[window.pid, default: []].insert(window.windowID)
+        }
+        return result
+    }
+
+    /// Normal app windows: layer 0, visible, not tiny, not WinTab's own.
+    private static func switchCandidates(_ windows: [OnScreenWindow], excludedPID: Int32?) -> [OnScreenWindow] {
+        windows.filter {
+            $0.layer == 0 && $0.alpha > 0 && $0.pid != excludedPID
+                && $0.bounds.width >= minimumSize && $0.bounds.height >= minimumSize
+        }
     }
 
     /// Position of the AX window in the on-screen list: by window ID, or – when the ID is unknown – the

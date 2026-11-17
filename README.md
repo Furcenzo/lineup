@@ -5,13 +5,13 @@
 A window switcher for macOS that works like **Alt+Tab on Windows**: it switches between *windows*, not apps.
 Free, minimal, no upsells. Available in English and Slovak (follows the macOS language setting).
 
-> **Status:** early development (milestone 3 of 5, see [PLAN.md](PLAN.md)). Only windows of the current
-> desktop (Space) are listed; all Spaces come next.
+> **Status:** early development (milestone 4 of 5, see [PLAN.md](PLAN.md)). Settings window, launch at
+> login and a first release come next.
 
 ## Usage
 
-- Hold **⌘ Command** and press **Tab** – the switcher shows previews of the windows on the current desktop,
-  most recently used first.
+- Hold **⌘ Command** and press **Tab** – the switcher shows previews of your windows on all desktops (Spaces)
+  and fullscreen apps, most recently used first. Choosing a window on another desktop switches there.
 - **Tab** / **→** / **↓** – next window, **⇧ Tab** / **←** / **↑** – previous window.
 - Release **⌘** (or press **Return**) – switch to the selected window. A quick ⌘Tab flips to the previous window.
 - **Esc** – close without switching. A mouse click on a window switches to it.
@@ -19,7 +19,7 @@ Free, minimal, no upsells. Available in English and Slovak (follows the macOS la
 
 WinTab lives in the menu bar (no Dock icon). Its menu has **Shortcut**: ⌘Tab (replaces the system app
 switcher, the default) or ⌥Tab (keeps the system ⌘Tab), and **Window Previews** (turn off to see app icons
-instead). Quit WinTab from the same menu – the system ⌘Tab
+instead) and **Windows from All Desktops** (turn off to see only the current desktop). Quit WinTab from the same menu – the system ⌘Tab
 comes back as soon as WinTab quits, crashes or is force-quit (a small watchdog process, also called WinTab,
 takes care of that). In password fields and with Terminal's Secure Keyboard Entry macOS hides key presses
 from all apps, so ⌘Tab shows the system app switcher there.
@@ -73,7 +73,8 @@ The binary inside the bundle accepts environment variables (output on stdout):
 - `WINTAB_LIST=1` – print the windows the switcher would offer and quit,
 - `WINTAB_SNAPSHOT=/path.png` – save an image of the switcher overlay and quit (no screen recording needed),
 - `WINTAB_SWITCH=<n>` – switch to the n-th window of the list and print which window is in front afterwards,
-- `WINTAB_CYCLE=<n>` – open, move and close the switcher overlay n times (smoke test) and quit.
+- `WINTAB_CYCLE=<n>` – open, move and close the switcher overlay n times (smoke test) and quit,
+- `WINTAB_SPACES=1` – print the desktops (Spaces), the windows on them and what the private APIs find.
 
 The running app logs focus changes and window lists:
 
@@ -105,7 +106,7 @@ See [CLAUDE.md](CLAUDE.md) for the detailed rules.
 ## Project structure
 
 - `Sources/WinTabCore` – window list ordering, selection and hotkey logic (no UI, tested).
-- `Sources/CPrivate` – declarations of private macOS APIs.
+- `Sources/CPrivate` – private macOS APIs (Spaces, window focus, window capture), looked up at run time.
 - `Sources/WinTab` – the app: keyboard event tap, ⌘Tab takeover, focus tracking, window list via
   Accessibility, overlay panel, menu bar.
 - `Tests/WinTabCoreTests` – tests for the core logic.
@@ -114,9 +115,14 @@ See [CLAUDE.md](CLAUDE.md) for the detailed rules.
 ## Acknowledgments
 
 [AltTab](https://github.com/lwouis/alt-tab-macos) by Louis Pontoise and contributors (GPL-3.0) – the local
-code signing setup is based on its `scripts/codesign`, turning off the system ⌘Tab follows its use of
-`CGSSetSymbolicHotKeyEnabled`, and later milestones (all Spaces, precise window focus) will build on its
-research into private macOS APIs.
+code signing setup is based on its `scripts/codesign`, and WinTab's use of private macOS APIs follows its
+research: turning off the system ⌘Tab (`CGSSetSymbolicHotKeyEnabled`), listing windows of all Spaces,
+finding their accessibility elements through remote tokens, capturing windows on other Spaces and focusing
+one exact window (`_SLPSSetFrontProcessWithOptions` + the key-window event record). AltTab in turn credits
+[yabai](https://github.com/koekeishiya/yabai) and [Hammerspoon](https://github.com/Hammerspoon/hammerspoon).
+
+WinTab uses these private APIs only where macOS has no public way; they are looked up at run time, so if a
+macOS update removes them, WinTab keeps working with the current desktop only.
 
 ## License
 

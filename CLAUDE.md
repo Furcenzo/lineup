@@ -7,12 +7,14 @@ notes and risks; update it when a milestone is done or the plan changes.
 - `Sources/WinTabCore` – pure logic, no AppKit: window list building (`WindowListBuilder`), MRU order
   (`RecentWindows`), tile grid and thumbnail sizes (`GridLayout`, `aspectFit`), selection (`Selection`), hotkey state machine + shortcut setting (`HotkeyStateMachine`,
   `ShortcutChoice`). Tested in `Tests/WinTabCoreTests`.
-- `Sources/CPrivate` – C declarations of private macOS APIs (`_AXUIElementGetWindow`,
-  `CGSSetSymbolicHotKeyEnabled`, later more SkyLight/CGS). Keep every private API here and always have a
-  public fallback.
+- `Sources/CPrivate` – private macOS APIs: declarations of `_AXUIElementGetWindow` and the CGS symbolic hot
+  keys, plus `WT*` C wrappers that look SkyLight/HIServices symbols up with `dlsym` (Spaces, window lists,
+  `WTFocusWindow`, remote-token elements, `WTCopyWindowImage`). Keep every private API here, prefer `dlsym`
+  for new ones (a missing symbol must not stop the app from launching) and always have a public fallback.
 - `Sources/WinTab` – the app: `KeyboardTap` (CGEventTap), `FocusTracker` (AXObserver + NSWorkspace → MRU),
   `SystemAppSwitcher` (turning the system ⌘Tab off/on, signal handlers, `--watchdog` process),
-  `WindowSource` (AX + CGWindowList, switching), `ThumbnailStore` + `ScreenRecordingPermission`
+  `WindowSource` (AX + CGWindowList, switching), `OtherSpaces` (`Spaces`, `RemoteWindowSearch` – windows on
+  other Spaces), `DebugSpaces` (`WINTAB_SPACES=1`), `ThumbnailStore` + `ScreenRecordingPermission`
   (ScreenCaptureKit previews), `SwitcherController`, `SwitcherPanel` (non-activating
   NSPanel + SwiftUI), `Permissions`, `main.swift` (menu bar, state polling, debug commands).
 
@@ -36,7 +38,7 @@ Accessibility and add it again.
 Testing without a keyboard (results on stdout; `open --stdout <file> --env …` works too):
 `build/WinTab.app/Contents/MacOS/WinTab` with `WINTAB_LIST=1` (print the window list),
 `WINTAB_SNAPSHOT=/x.png` (render the overlay to PNG, no screen recording needed), `WINTAB_CYCLE=<n>`
-(open/close smoke test) or `WINTAB_SWITCH=<n>`
+(open/close smoke test), `WINTAB_SPACES=1` (private Space APIs report) or `WINTAB_SWITCH=<n>`
 (switch to the n-th window and print the frontmost app/window). Run the binary inside the signed bundle –
 the permission belongs to the bundle. Debug runs never touch the system ⌘Tab. The running app logs focus
 changes: `log stream --level debug --predicate 'subsystem == "io.github.furcenzo.wintab"'`.

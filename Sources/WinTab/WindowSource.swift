@@ -20,7 +20,9 @@ enum WindowSource {
     /// How long one AX request to an app may take; a hung app must not freeze the switcher.
     private static let axTimeout: Float = 0.25
 
-    static func currentWindows() -> [WindowHandle] {
+    /// The windows to offer: the current Space (+ minimized and hidden windows), and with `remote` also the
+    /// windows on other Spaces whose elements `remote` has found; the rest is handed to `remote` to look up.
+    static func currentWindows(remote: RemoteWindowSearch? = nil) -> [WindowHandle] {
         let apps = NSWorkspace.shared.runningApplications.filter {
             $0.activationPolicy == .regular && !$0.isTerminated
         }
@@ -56,8 +58,29 @@ enum WindowSource {
             }
         }
 
-        let windows = WindowListBuilder.build(onScreen: onScreenWindows(), axWindows: axWindows,
-                                              apps: appInfos, excludedPID: ownPID)
+        var otherSpaces = [OnScreenWindow]()
+        if let remote {
+            otherSpaces = Spaces.windowsOnAllSpaces()
+            let onAnySpace = Set(otherSpaces.map(\.windowID))
+            remote.prune(keeping: onAnySpace)
+            let listed = Set(axWindows.compactMap(\.windowID))
+            for windowID in remote.knownWindowIDs.subtracting(listed) {
+                guard let element = remote.element(for: windowID),
+                      let window = otherSpaces.first(where: { $0.windowID == windowID }) else { continue }
+                let values = element.values([kAXTitleAttribute, kAXSubroleAttribute, kAXMinimizedAttribute])
+                axWindows.append(AXWindow(
+                    token: elements.count, windowID: windowID, pid: window.pid, title: values[0] as? String ?? "",
+                    subrole: values[1] as? String, isMinimized: (values[2] as? NSNumber)?.boolValue ?? false,
+                    bounds: window.bounds))
+                elements.append(element)
+            }
+            remote.search(WindowListBuilder.windowsToLookUp(
+                otherSpaces: otherSpaces, knownIDs: Set(axWindows.compactMap(\.windowID)),
+                appPIDs: Set(appInfos.map(\.pid)), excludedPID: ownPID))
+        }
+
+        let windows = WindowListBuilder.build(onScreen: onScreenWindows(), otherSpaces: otherSpaces,
+                                              axWindows: axWindows, apps: appInfos, excludedPID: ownPID)
         return windows.map { WindowHandle(window: $0, element: elements[$0.token], icon: icons[$0.pid]) }
     }
 
@@ -65,29 +88,36 @@ enum WindowSource {
     static func onScreenWindows() -> [OnScreenWindow] {
         let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
         guard let list = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else { return [] }
-        return list.compactMap { info in
-            guard let id = info[kCGWindowNumber as String] as? UInt32,
-                  let pid = info[kCGWindowOwnerPID as String] as? Int32,
-                  let boundsDict = info[kCGWindowBounds as String] as? NSDictionary,
-                  let bounds = CGRect(dictionaryRepresentation: boundsDict) else { return nil }
-            return OnScreenWindow(
-                windowID: id, pid: pid,
-                layer: info[kCGWindowLayer as String] as? Int ?? 0,
-                bounds: Rect(x: bounds.minX, y: bounds.minY, width: bounds.width, height: bounds.height),
-                alpha: info[kCGWindowAlpha as String] as? Double ?? 1)
-        }
+        return list.compactMap(onScreenWindow(from:))
     }
 
-    /// Brings the window to the front: un-minimizes it, unhides its app, raises it and makes its app
-    /// frontmost. Uses only public API, so on macOS 14+ a window of an app with several windows can
-    /// occasionally end up behind another window of the same app (milestone 4 switches to the private
-    /// `_SLPSSetFrontProcessWithOptions` like AltTab).
+    /// One CGWindowList dictionary as an `OnScreenWindow`.
+    nonisolated static func onScreenWindow(from info: [String: Any]) -> OnScreenWindow? {
+        guard let id = info[kCGWindowNumber as String] as? UInt32,
+              let pid = info[kCGWindowOwnerPID as String] as? Int32,
+              let boundsDict = info[kCGWindowBounds as String] as? NSDictionary,
+              let bounds = CGRect(dictionaryRepresentation: boundsDict) else { return nil }
+        return OnScreenWindow(
+            windowID: id, pid: pid,
+            layer: info[kCGWindowLayer as String] as? Int ?? 0,
+            bounds: Rect(x: bounds.minX, y: bounds.minY, width: bounds.width, height: bounds.height),
+            alpha: info[kCGWindowAlpha as String] as? Double ?? 1)
+    }
+
+    /// Brings the window to the front: un-minimizes it, unhides its app, then focuses exactly this window
+    /// with the private `_SLPSSetFrontProcessWithOptions` + key-window event (switches the Space when the
+    /// window is on another one) and raises it. Without the private API: raise + make the app frontmost
+    /// through accessibility, which can leave a window behind a sibling of the same app.
     static func activate(_ handle: WindowHandle) {
         let window = handle.window
         let app = NSRunningApplication(processIdentifier: window.pid)
         if window.isAppHidden { app?.unhide() }
         if window.isMinimized {
             AXUIElementSetAttributeValue(handle.element, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+        }
+        if let windowID = window.windowID, WTFocusWindow(window.pid, windowID) {
+            AXUIElementPerformAction(handle.element, kAXRaiseAction as CFString)
+            return
         }
         AXUIElementSetAttributeValue(handle.element, kAXMainAttribute as CFString, kCFBooleanTrue)
         AXUIElementPerformAction(handle.element, kAXRaiseAction as CFString)

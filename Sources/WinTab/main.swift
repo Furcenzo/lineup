@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Furcenzo
 
 import AppKit
+import CPrivate
 import WinTabCore
 
 @MainActor
@@ -15,6 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private static let askedScreenRecordingKey = "askedForScreenRecording"
     /// Window previews switched on in the menu (default on); they also need the Screen Recording permission.
     private var previewsWanted = UserDefaults.standard.object(forKey: previewsDefaultsKey) as? Bool ?? true
+    private static let allSpacesDefaultsKey = "allSpaces"
+    private var spaceObserver: NSObjectProtocol?
     private let commandTabGuard = CommandTabGuard()
     private let permissionWindow = PermissionWindowController()
     private var statusItem: NSStatusItem?
@@ -27,12 +30,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // WinTab has no windows most of the time; macOS must not quit it for that ("automatic termination").
         ProcessInfo.processInfo.disableAutomaticTermination("WinTab listens for its keyboard shortcut")
         switcher.setPreviews(previewsWanted && ScreenRecordingPermission.isGranted)
+        switcher.showsAllSpaces = UserDefaults.standard.object(forKey: Self.allSpacesDefaultsKey) as? Bool ?? true
         if runDebugCommand() { return }
         SystemAppSwitcher.installSignalHandlers()
         SystemAppSwitcher.startWatchdog()
         setUpStatusItem()
         refreshState(showPermissionWindow: true)
         askForScreenRecordingOnce()
+        spaceObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.switcher.prefetchOtherSpaces() }
+        }
         // There are no notifications for a changed permission or secure input – check once a second.
         monitorTask = Task { [weak self] in
             while !Task.isCancelled {
@@ -54,7 +62,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func refreshState(showPermissionWindow: Bool) {
         if AccessibilityPermission.isGranted {
             if !keyboardTap.isInstalled, keyboardTap.start() { permissionWindow.close() }
-            if keyboardTap.isInstalled, !focusTracker.isRunning { focusTracker.start() }
+            if keyboardTap.isInstalled, !focusTracker.isRunning {
+                focusTracker.start()
+                switcher.prefetchOtherSpaces()
+            }
         } else if keyboardTap.isInstalled {
             // The permission was taken away while WinTab runs.
             switcher.perform(.cancel)
@@ -153,6 +164,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(withTitle: String(localized: "Allow Screen Recording for Previews…"),
                          action: #selector(allowScreenRecording), keyEquivalent: "").target = self
         }
+        let allSpacesItem = menu.addItem(withTitle: String(localized: "Windows from All Desktops"),
+                                         action: #selector(toggleAllSpaces), keyEquivalent: "")
+        allSpacesItem.target = self
+        allSpacesItem.state = switcher.showsAllSpaces ? .on : .off
         menu.addItem(.separator())
 
         menu.addItem(withTitle: String(localized: "About WinTab"), action: #selector(showAbout), keyEquivalent: "")
@@ -165,6 +180,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if let raw = sender.representedObject as? String, let choice = ShortcutChoice(rawValue: raw) {
             setShortcut(choice)
         }
+    }
+
+    @objc private func toggleAllSpaces() {
+        switcher.showsAllSpaces.toggle()
+        UserDefaults.standard.set(switcher.showsAllSpaces, forKey: Self.allSpacesDefaultsKey)
+        switcher.prefetchOtherSpaces()
     }
 
     @objc private func togglePreviews() {
@@ -197,6 +218,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     ///   app and its focused window afterwards and quits.
     private func runDebugCommand() -> Bool {
         let env = ProcessInfo.processInfo.environment
+        if env["WINTAB_SPACES"] != nil {
+            DebugSpaces.run()
+            fflush(stdout)
+            exit(0)
+        }
         if let cycles = env["WINTAB_CYCLE"].flatMap(Int.init) {
             runOpenCloseCycles(cycles)
             return true
@@ -204,19 +230,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard env["WINTAB_LIST"] != nil || env["WINTAB_SNAPSHOT"] != nil || env["WINTAB_SWITCH"] != nil else {
             return false
         }
-        print("Accessibility permission: \(AccessibilityPermission.isGranted)")
-        print("System ⌘Tab enabled: \(SystemAppSwitcher.isEnabled)")
-        print("Screen Recording permission: \(ScreenRecordingPermission.isGranted), previews: \(switcher.showsPreviews)")
-        let start = ContinuousClock.now
-        let handles = switcher.loadWindows()
-        print("Window list built in \(ContinuousClock.now - start)")
-        for (index, handle) in handles.enumerated() {
-            let w = handle.window
-            print("\(index): [\(w.appName)] \(w.displayTitle) id=\(w.windowID.map(String.init) ?? "-")"
-                + (w.isMinimized ? " minimized" : "") + (w.isAppHidden ? " hidden" : ""))
-        }
-        if let path = env["WINTAB_SNAPSHOT"] {
-            Task { @MainActor in
+        Task { @MainActor in
+            print("Accessibility permission: \(AccessibilityPermission.isGranted)")
+            print("System ⌘Tab enabled: \(SystemAppSwitcher.isEnabled)")
+            print("Screen Recording permission: \(ScreenRecordingPermission.isGranted), previews: \(switcher.showsPreviews)")
+            print("Private APIs available: \(WTPrivateAPIsAvailable()), all Spaces: \(switcher.showsAllSpaces)")
+            if switcher.showsAllSpaces {
+                // The first listing starts the background search for windows on other Spaces.
+                switcher.loadWindows()
+                try? await Task.sleep(for: .milliseconds(600))
+            }
+            let start = ContinuousClock.now
+            let handles = switcher.loadWindows()
+            print("Window list built in \(ContinuousClock.now - start)")
+            for (index, handle) in handles.enumerated() {
+                let w = handle.window
+                print("\(index): [\(w.appName)] \(w.displayTitle) id=\(w.windowID.map(String.init) ?? "-")"
+                    + (w.isMinimized ? " minimized" : "") + (w.isAppHidden ? " hidden" : "")
+                    + (w.isOnOtherSpace ? " other-space" : ""))
+            }
+            if let path = env["WINTAB_SNAPSHOT"] {
                 // Thumbnails arrive asynchronously.
                 if switcher.showsPreviews { try? await Task.sleep(for: .seconds(1.5)) }
                 do {
@@ -225,28 +258,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 } catch {
                     print("Snapshot failed: \(error)")
                 }
-                fflush(stdout)
-                exit(0)
             }
-            return true
-        }
-        if let n = env["WINTAB_SWITCH"].flatMap(Int.init), handles.indices.contains(n) {
-            print("Switching to \(n): \(handles[n].window.displayTitle)")
-            WindowSource.activate(handles[n])
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(700))
+            if let n = env["WINTAB_SWITCH"].flatMap(Int.init), handles.indices.contains(n) {
+                print("Switching to \(n): \(handles[n].window.displayTitle)")
+                WindowSource.activate(handles[n])
+                try? await Task.sleep(for: .milliseconds(900))
                 let front = NSWorkspace.shared.frontmostApplication
                 let focused = front.map { AXUIElementCreateApplication($0.processIdentifier) }?
                     .value(kAXFocusedWindowAttribute)
                 let title = focused.map { ($0 as! AXUIElement).string(kAXTitleAttribute) ?? "" } ?? "-"
-                print("Frontmost: \(front?.localizedName ?? "-") – focused window: \(title)")
-                fflush(stdout)
-                exit(0)
+                let id = focused.flatMap { FocusTracker.windowID(of: $0 as! AXUIElement) }
+                print("Frontmost: \(front?.localizedName ?? "-") – focused window: \(title) id=\(id.map(String.init) ?? "-")")
             }
-            return true
+            fflush(stdout)
+            exit(0)
         }
-        fflush(stdout)
-        exit(0)
+        return true
     }
 
     /// `WINTAB_CYCLE=<n>`: opens the overlay on screen, moves the selection and closes it (without

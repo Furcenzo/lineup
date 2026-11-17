@@ -22,6 +22,10 @@ final class SwitcherController {
     private var recent = RecentWindows()
     private let panel = SwitcherPanel()
     private let thumbnails = ThumbnailStore()
+    private let remoteWindows = RemoteWindowSearch()
+    /// List windows of all Spaces (desktops, fullscreen apps), not just the current one.
+    var showsAllSpaces = true
+    private var prefetchTask: Task<Void, Never>?
     /// The window that had the focus last – captured when it loses the focus.
     private var lastFocusedID: CGWindowID?
     private var showTask: Task<Void, Never>?
@@ -92,7 +96,7 @@ final class SwitcherController {
             .flatMap { FocusTracker.focusedWindowID(of: $0.processIdentifier) }
         if let focusedID { recordFocus(windowID: focusedID) }
 
-        let unordered = WindowSource.currentWindows()
+        let unordered = WindowSource.currentWindows(remote: showsAllSpaces ? remoteWindows : nil)
         let byID = Dictionary(unordered.map { ($0.window.id, $0) }, uniquingKeysWith: { first, _ in first })
         handles = recent.order(unordered.map(\.window)).compactMap { byID[$0.id] }
 
@@ -106,7 +110,8 @@ final class SwitcherController {
         updateSelection()
         if thumbnails.isEnabled {
             // Minimized windows and windows of hidden apps can't be captured – they keep their cached thumbnail.
-            let capturable = handles.filter { !$0.window.isMinimized && !$0.window.isAppHidden }.compactMap(\.window.windowID)
+            let capturable = handles.filter { !$0.window.isMinimized && !$0.window.isAppHidden }
+                .compactMap(\.window.windowID)
             thumbnails.refresh(capturable)
             thumbnails.prune(keeping: Set(handles.compactMap(\.window.windowID)))
         }
@@ -115,6 +120,18 @@ final class SwitcherController {
     }
 
     var debugPanel: SwitcherPanel { panel }
+
+    /// Looks up windows of other Spaces in the background (after a Space change or at start), so they are
+    /// ready when the switcher opens next time.
+    func prefetchOtherSpaces() {
+        guard showsAllSpaces else { return }
+        prefetchTask?.cancel()
+        prefetchTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard let self, !Task.isCancelled, !machine.isActive else { return }
+            _ = WindowSource.currentWindows(remote: remoteWindows)
+        }
+    }
 
     private func open(reverse: Bool) {
         // Reading the windows takes a few tens of milliseconds. Don't do it inside the event tap callback –
