@@ -16,6 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Agent app: no Dock icon, no app menu (LSUIElement in Info.plist does the same for the bundle;
         // this also covers `swift run`).
         NSApp.setActivationPolicy(.accessory)
+        // WinTab has no windows most of the time; macOS must not quit it for that ("automatic termination").
+        ProcessInfo.processInfo.disableAutomaticTermination("WinTab listens for its keyboard shortcut")
         if runDebugCommand() { return }
         setUpStatusItem()
         startWhenPermitted()
@@ -92,6 +94,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     ///   app and its focused window afterwards and quits.
     private func runDebugCommand() -> Bool {
         let env = ProcessInfo.processInfo.environment
+        if let cycles = env["WINTAB_CYCLE"].flatMap(Int.init) {
+            runOpenCloseCycles(cycles)
+            return true
+        }
         guard env["WINTAB_LIST"] != nil || env["WINTAB_SNAPSHOT"] != nil || env["WINTAB_SWITCH"] != nil else {
             return false
         }
@@ -127,6 +133,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         fflush(stdout)
         exit(0)
+    }
+
+    /// `WINTAB_CYCLE=<n>`: opens the overlay on screen, moves the selection and closes it (without
+    /// switching) n times – a smoke test for the panel's open/close cycle. Exits with 0 when done.
+    private func runOpenCloseCycles(_ cycles: Int) {
+        Task { @MainActor in
+            for cycle in 1...max(1, cycles) {
+                let count = switcher.loadWindows(reverse: cycle.isMultiple(of: 2)).count
+                switcher.debugPanel.present()
+                for _ in 0..<3 {
+                    try? await Task.sleep(for: .milliseconds(40))
+                    switcher.perform(.next)
+                }
+                try? await Task.sleep(for: .milliseconds(40))
+                switcher.perform(.cancel)
+                try? await Task.sleep(for: .milliseconds(40))
+                print("cycle \(cycle): \(count) windows")
+            }
+            fflush(stdout)
+            exit(0)
+        }
     }
 }
 

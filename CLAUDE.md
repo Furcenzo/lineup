@@ -27,7 +27,8 @@ Accessibility and add it again.
 
 Testing without a keyboard (results on stdout; `open --stdout <file> --env …` works too):
 `build/WinTab.app/Contents/MacOS/WinTab` with `WINTAB_LIST=1` (print the window list),
-`WINTAB_SNAPSHOT=/x.png` (render the overlay to PNG, no screen recording needed) or `WINTAB_SWITCH=<n>`
+`WINTAB_SNAPSHOT=/x.png` (render the overlay to PNG, no screen recording needed), `WINTAB_CYCLE=<n>`
+(open/close smoke test) or `WINTAB_SWITCH=<n>`
 (switch to the n-th window and print the frontmost app/window). Run the binary inside the signed bundle –
 the permission belongs to the bundle.
 

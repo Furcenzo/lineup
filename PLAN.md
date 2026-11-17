@@ -96,8 +96,14 @@ can occasionally stay behind its sibling (public API only, see milestone 4).
   the callback fast. Secure input (password fields) hides keystrokes from all taps.
 - **Activation on macOS 14+:** `NSRunningApplication.activate()` is "cooperative" and often refused for a
   background app; setting `kAXFrontmostAttribute` on the app element works for a trusted process.
+- **SwiftUI overlay:** never look items up by index inside `ForEach` (`model.items[index]`) – SwiftUI may
+  evaluate a row of the old list after the list changed, which crashed milestone 1 on closing the switcher.
+  Pass the item values into the views.
 - **Debugging without a keyboard/screen recording:** `WINTAB_LIST=1`, `WINTAB_SNAPSHOT=/x.png`,
-  `WINTAB_SWITCH=<n>` (see `main.swift` / README).
+  `WINTAB_SWITCH=<n>`, `WINTAB_CYCLE=<n>` (open/close smoke test) – see `main.swift` / README. Crash
+  reports: `~/Library/Logs/DiagnosticReports/WinTab-*.ips`.
+- Milestone 1 was verified on macOS 27.0 (MacBook Air): listing, switching between windows of the same app,
+  ⌥Tab / ⇧ / Esc / quick flip / mouse click / minimized windows.
 
 ## Risks
 

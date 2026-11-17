@@ -62,7 +62,8 @@ The binary inside the bundle accepts environment variables (output on stdout):
 
 - `WINTAB_LIST=1` – print the windows the switcher would offer and quit,
 - `WINTAB_SNAPSHOT=/path.png` – save an image of the switcher overlay and quit (no screen recording needed),
-- `WINTAB_SWITCH=<n>` – switch to the n-th window of the list and print which window is in front afterwards.
+- `WINTAB_SWITCH=<n>` – switch to the n-th window of the list and print which window is in front afterwards,
+- `WINTAB_CYCLE=<n>` – open, move and close the switcher overlay n times (smoke test) and quit.
 
 ```bash
 WINTAB_LIST=1 build/WinTab.app/Contents/MacOS/WinTab

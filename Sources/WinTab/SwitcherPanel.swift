@@ -131,24 +131,34 @@ struct SwitcherView: View {
         CGFloat(model.columns) * SwitcherLayout.tileWidth + CGFloat(model.columns - 1) * SwitcherLayout.spacing
     }
 
+    /// An item with its position. Views get the item itself, never an index to look up later: SwiftUI may
+    /// still evaluate a row of the old list after `items` changed, and a stale index would crash.
+    private struct Entry: Identifiable {
+        let index: Int
+        let item: SwitcherModel.Item
+        var id: String { item.id }
+    }
+
     private var grid: some View {
         let columns = max(1, model.columns)
-        let rows = stride(from: 0, to: model.items.count, by: columns).map {
-            Array(model.items.indices[$0..<min($0 + columns, model.items.count)])
+        let entries = model.items.enumerated().map { Entry(index: $0.offset, item: $0.element) }
+        let rows = stride(from: 0, to: entries.count, by: columns).map {
+            Array(entries[$0..<min($0 + columns, entries.count)])
         }
         return VStack(alignment: .leading, spacing: SwitcherLayout.spacing) {
-            ForEach(rows, id: \.first) { row in
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                 HStack(spacing: SwitcherLayout.spacing) {
-                    ForEach(row, id: \.self) { index in
-                        tile(index)
+                    ForEach(row) { entry in
+                        tile(entry)
                     }
                 }
             }
         }
     }
 
-    private func tile(_ index: Int) -> some View {
-        let item = model.items[index]
+    private func tile(_ entry: Entry) -> some View {
+        let item = entry.item
+        let index = entry.index
         let isSelected = index == model.selectedIndex
         return VStack(spacing: 6) {
             Group {
