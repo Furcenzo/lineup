@@ -210,11 +210,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             // Where are the menu bar icons of the other running WinTab processes (hidden by a menu bar manager,
             // behind the notch…)? Needs the Accessibility permission, which the bundle has.
             // `WINTAB_MENUBAR=<pid>` checks another app instead (to compare).
-            let apps = Int32(env["WINTAB_MENUBAR"] ?? "").flatMap { NSRunningApplication(processIdentifier: $0) }.map { [$0] }
+            // `=all` lists every app with menu bar items.
+            let apps = env["WINTAB_MENUBAR"] == "all" ? NSWorkspace.shared.runningApplications
+                : Int32(env["WINTAB_MENUBAR"] ?? "").flatMap { NSRunningApplication(processIdentifier: $0) }.map { [$0] }
                 ?? NSRunningApplication.runningApplications(withBundleIdentifier: SystemAppSwitcher.bundleID)
             for app in apps where app.processIdentifier != ProcessInfo.processInfo.processIdentifier {
                 let extras = AXUIElementCreateApplication(app.processIdentifier).value("AXExtrasMenuBar")
                 let items = extras.map { ($0 as! AXUIElement).array(kAXChildrenAttribute) } ?? []
+                if items.isEmpty && env["WINTAB_MENUBAR"] == "all" { continue }
                 print("\(app.localizedName ?? "?") pid \(app.processIdentifier) at \(app.bundleURL?.path ?? "?"): \(items.count) menu bar item(s)")
                 for item in items { print("  frame: \(item.frame.map { "\($0)" } ?? "?")") }
             }
