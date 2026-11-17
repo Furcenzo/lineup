@@ -25,6 +25,11 @@ import Testing
         #expect(Selection(count: 4).index == 1)
     }
 
+    @Test func forwardStartsOnFirstWhenNoWindowIsFocused() {
+        #expect(Selection(count: 4, firstIsCurrent: false).index == 0)
+        #expect(Selection(count: 4, reverse: true, firstIsCurrent: false).index == 3)
+    }
+
     @Test func reverseStartsOnLastWindow() {
         #expect(Selection(count: 4, reverse: true).index == 3)
     }

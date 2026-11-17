@@ -4,13 +4,20 @@ macOS window switcher like Alt+Tab on Windows (Swift 6, SwiftUI + AppKit, Swift 
 Agent app (`LSUIElement`, menu bar icon only). **Read [PLAN.md](PLAN.md) first** – milestones, technical
 notes and risks; update it when a milestone is done or the plan changes.
 
-- `Sources/WinTabCore` – pure logic, no AppKit: window list building/ordering (`WindowListBuilder`),
-  selection (`Selection`), hotkey state machine (`HotkeyStateMachine`). Tested in `Tests/WinTabCoreTests`.
-- `Sources/CPrivate` – C declarations of private macOS APIs (`_AXUIElementGetWindow`, later SkyLight/CGS).
-  Keep every private API here and always have a public fallback.
-- `Sources/WinTab` – the app: `KeyboardTap` (CGEventTap), `WindowSource` (AX + CGWindowList, switching),
-  `SwitcherController`, `SwitcherPanel` (non-activating NSPanel + SwiftUI), `Permissions`, `main.swift`
-  (menu bar, debug commands).
+- `Sources/WinTabCore` – pure logic, no AppKit: window list building (`WindowListBuilder`), MRU order
+  (`RecentWindows`), selection (`Selection`), hotkey state machine + shortcut setting (`HotkeyStateMachine`,
+  `ShortcutChoice`). Tested in `Tests/WinTabCoreTests`.
+- `Sources/CPrivate` – C declarations of private macOS APIs (`_AXUIElementGetWindow`,
+  `CGSSetSymbolicHotKeyEnabled`, later more SkyLight/CGS). Keep every private API here and always have a
+  public fallback.
+- `Sources/WinTab` – the app: `KeyboardTap` (CGEventTap), `FocusTracker` (AXObserver + NSWorkspace → MRU),
+  `SystemAppSwitcher` (turning the system ⌘Tab off/on, signal handlers, `--watchdog` process),
+  `WindowSource` (AX + CGWindowList, switching), `SwitcherController`, `SwitcherPanel` (non-activating
+  NSPanel + SwiftUI), `Permissions`, `main.swift` (menu bar, state polling, debug commands).
+
+**Never leave the system ⌘Tab turned off.** Its state is global and outlives WinTab. Any code path that
+stops WinTab's keyboard tap must let `CommandTabGuard` turn it back on. If it ever stays off during
+development, start and quit WinTab (or log out).
 
 Build: `swift build`, tests: `swift test`, app bundle: `./scripts/build-app.sh` → `build/WinTab.app`,
 build + restart: `./scripts/run.sh [sk|en]`.
@@ -30,7 +37,8 @@ Testing without a keyboard (results on stdout; `open --stdout <file> --env …` 
 `WINTAB_SNAPSHOT=/x.png` (render the overlay to PNG, no screen recording needed), `WINTAB_CYCLE=<n>`
 (open/close smoke test) or `WINTAB_SWITCH=<n>`
 (switch to the n-th window and print the frontmost app/window). Run the binary inside the signed bundle –
-the permission belongs to the bundle.
+the permission belongs to the bundle. Debug runs never touch the system ⌘Tab. The running app logs focus
+changes: `log stream --level debug --predicate 'subsystem == "io.github.furcenzo.wintab"'`.
 
 ## Localization – the app is bilingual (English + Slovak)
 

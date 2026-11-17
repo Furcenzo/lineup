@@ -14,4 +14,12 @@
 /// of an accessibility window element. Exported by HIServices.
 AXError _AXUIElementGetWindow(AXUIElementRef element, CGWindowID *windowID);
 
+/// System keyboard shortcuts ("symbolic hot keys") handled by the WindowServer before any event tap sees
+/// them. 1 = ⌘Tab, 2 = ⌘⇧Tab (the app switcher), 6 = ⌘` (next window of the same app).
+/// The enabled state is global for the login session and survives the process that changed it –
+/// whoever turns a hot key off must turn it back on. Exported by SkyLight via CoreGraphics.
+typedef int CGSSymbolicHotKey;
+CGError CGSSetSymbolicHotKeyEnabled(CGSSymbolicHotKey hotKey, bool isEnabled);
+bool CGSIsSymbolicHotKeyEnabled(CGSSymbolicHotKey hotKey);
+
 #endif

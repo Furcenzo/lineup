@@ -9,12 +9,14 @@ public struct Selection: Sendable, Equatable {
 
     /// Forward (⌥Tab) starts on the second item – the previously used window – so a quick
     /// ⌥Tab flips between the two most recent windows. Backward (⌥⇧Tab) starts on the last item.
-    public init(count: Int, reverse: Bool = false) {
+    /// When the first item is not the window that has the focus now (e.g. the desktop is focused),
+    /// forward starts on the first item – the most recent window.
+    public init(count: Int, reverse: Bool = false, firstIsCurrent: Bool = true) {
         self.count = max(0, count)
         switch self.count {
         case 0: index = nil
         case 1: index = 0
-        default: index = reverse ? self.count - 1 : 1
+        default: index = reverse ? self.count - 1 : (firstIsCurrent ? 1 : 0)
         }
     }
 

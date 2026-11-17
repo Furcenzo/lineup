@@ -66,8 +66,32 @@ public struct HotkeyConfig: Sendable, Equatable {
         self.modifier = modifier; self.keyCode = keyCode
     }
 
-    /// Milestone 1 uses ⌥Tab; ⌘Tab replaces the system switcher in milestone 2.
+    /// ⌘Tab – replaces the system app switcher (the default).
+    public static let commandTab = HotkeyConfig(modifier: .command)
+    /// ⌥Tab – leaves the system ⌘Tab alone.
     public static let optionTab = HotkeyConfig(modifier: .option)
+}
+
+/// The shortcut the user picked; the raw value is stored in UserDefaults.
+public enum ShortcutChoice: String, Sendable, CaseIterable {
+    case commandTab = "command"
+    case optionTab = "option"
+
+    public static let `default` = ShortcutChoice.commandTab
+
+    public init(storedValue: String?) {
+        self = storedValue.flatMap(ShortcutChoice.init(rawValue:)) ?? .default
+    }
+
+    public var config: HotkeyConfig {
+        switch self {
+        case .commandTab: .commandTab
+        case .optionTab: .optionTab
+        }
+    }
+
+    /// Whether WinTab has to turn off the system app switcher for this shortcut.
+    public var replacesSystemSwitcher: Bool { self == .commandTab }
 }
 
 /// Turns raw key events into switcher actions. Pure logic – the event tap feeds it and performs the

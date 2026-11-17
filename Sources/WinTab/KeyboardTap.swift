@@ -17,7 +17,8 @@ final class KeyboardTap {
         self.handler = handler
     }
 
-    var isRunning: Bool { tap.map { CGEvent.tapIsEnabled(tap: $0) } ?? false }
+    /// The tap exists (it was created with the Accessibility permission).
+    var isInstalled: Bool { tap != nil }
 
     /// Fails (returns false) when WinTab does not have the Accessibility permission yet.
     @discardableResult

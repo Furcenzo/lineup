@@ -41,14 +41,17 @@ enum WindowSource {
                 AXUIElementSetMessagingTimeout(element, axTimeout)
                 var windowID: CGWindowID = 0
                 let hasID = _AXUIElementGetWindow(element, &windowID) == .success && windowID != 0
+                // One request for all attributes instead of one per attribute (each is a round trip to the app).
+                let values = element.values([kAXTitleAttribute, kAXSubroleAttribute, kAXMinimizedAttribute,
+                                             kAXPositionAttribute, kAXSizeAttribute])
                 axWindows.append(AXWindow(
                     token: elements.count,
                     windowID: hasID ? windowID : nil,
                     pid: pid,
-                    title: element.string(kAXTitleAttribute) ?? "",
-                    subrole: element.string(kAXSubroleAttribute),
-                    isMinimized: element.bool(kAXMinimizedAttribute) ?? false,
-                    bounds: element.frame))
+                    title: values[0] as? String ?? "",
+                    subrole: values[1] as? String,
+                    isMinimized: (values[2] as? NSNumber)?.boolValue ?? false,
+                    bounds: AXUIElement.frame(position: values[3], size: values[4])))
                 elements.append(element)
             }
         }
@@ -117,9 +120,26 @@ extension AXUIElement {
         }
     }
 
+    /// Several attributes in one request; missing attributes and errors are nil.
+    func values(_ attributes: [String]) -> [CFTypeRef?] {
+        var result: CFArray?
+        guard AXUIElementCopyMultipleAttributeValues(self, attributes as CFArray, AXCopyMultipleAttributeOptions(),
+                                                     &result) == .success,
+              let array = result as? [AnyObject], array.count == attributes.count else {
+            return Array(repeating: nil, count: attributes.count)
+        }
+        return array.map { value in
+            // Failed attributes come back as an AXValue holding the AXError.
+            if CFGetTypeID(value) == AXValueGetTypeID(), AXValueGetType(value as! AXValue) == .axError { return nil }
+            return value
+        }
+    }
+
     /// Position and size in global screen coordinates (top-left origin).
-    var frame: Rect? {
-        guard let position = value(kAXPositionAttribute), let size = value(kAXSizeAttribute),
+    var frame: Rect? { Self.frame(position: value(kAXPositionAttribute), size: value(kAXSizeAttribute)) }
+
+    static func frame(position: CFTypeRef?, size: CFTypeRef?) -> Rect? {
+        guard let position, let size,
               CFGetTypeID(position) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { return nil }
         var point = CGPoint.zero
         var extent = CGSize.zero

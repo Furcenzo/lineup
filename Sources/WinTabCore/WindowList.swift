@@ -74,7 +74,14 @@ public struct SwitcherWindow: Sendable, Equatable, Identifiable {
     public var isMinimized: Bool
     public var isAppHidden: Bool
 
-    public var id: String { windowID.map { "w\($0)" } ?? "p\(pid)t\(token)" }
+    public init(token: Int, windowID: UInt32?, pid: Int32, appName: String, title: String,
+                isMinimized: Bool = false, isAppHidden: Bool = false) {
+        self.token = token; self.windowID = windowID; self.pid = pid; self.appName = appName; self.title = title
+        self.isMinimized = isMinimized; self.isAppHidden = isAppHidden
+    }
+
+    /// Stable while the window exists (CGWindowID); windows without a known ID get a per-listing fallback.
+    public var id: String { windowID.map(Self.id(windowID:)) ?? "p\(pid)t\(token)" }
     /// The window title, or the app name for windows without one.
     public var displayTitle: String {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)

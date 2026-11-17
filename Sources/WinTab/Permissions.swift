@@ -59,12 +59,12 @@ private struct PermissionView: View {
                 Text("WinTab needs the Accessibility permission")
                     .font(.title3.bold())
             }
-            Text("It lets WinTab notice the ⌥Tab shortcut, list the windows of your apps and bring the one you pick to the front. WinTab does not record or send anything.")
+            Text("It lets WinTab notice its keyboard shortcut, list the windows of your apps and bring the one you pick to the front. WinTab does not record or send anything.")
                 .fixedSize(horizontal: false, vertical: true)
             VStack(alignment: .leading, spacing: 4) {
                 Text("1. Click “Open System Settings”.")
                 Text("2. In Privacy & Security → Accessibility, turn on WinTab.")
-                Text("3. This window closes by itself and ⌥Tab starts working.")
+                Text("3. This window closes by itself and the shortcut starts working.")
             }
             .foregroundStyle(.secondary)
             HStack {

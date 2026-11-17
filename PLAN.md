@@ -6,7 +6,7 @@ A window switcher for macOS that works like Alt+Tab on Windows: it cycles throug
 
 Target behaviour (all milestones done):
 
-- `⌘ Tab` replaces the system app switcher (can be turned off → `⌥ Tab` instead).
+- `⌘ Tab` replaces the system app switcher (can be switched to `⌥ Tab` instead).
 - Window previews (thumbnails), window title and app icon.
 - Windows from **all Spaces**, including minimized windows, hidden apps and fullscreen windows.
 - Most-recently-used (MRU) order.
@@ -35,19 +35,28 @@ Known limits of milestone 1: windows on other Spaces are not listed; the order i
 (which is MRU for visible windows, but not for minimized ones); a window of an app with several windows
 can occasionally stay behind its sibling (public API only, see milestone 4).
 
-### 2. Replace ⌘Tab + MRU order
+### 2. Replace ⌘Tab + MRU order ✅ (2026-11-17)
 
-- Hotkey `⌘ Tab`: same `CGEventTap`, `HotkeyConfig(modifier: .command)`. While WinTab runs, turn off the
-  system ⌘Tab symbolic hotkey (`CGSSetSymbolicHotKeyEnabled` for hotkeys 1 and 2 – "cmd-tab" and
-  "cmd-shift-tab" – like AltTab's `KeyboardEvents`/`SymbolicHotKey` code) and restore it on quit /
-  crash (also in a signal handler and when the event tap stops).
-- Setting ⌘Tab vs ⌥Tab (until milestone 5 a `UserDefaults` key is enough).
-- MRU: track focus changes with `NSWorkspace.didActivateApplicationNotification` and an `AXObserver` per app
-  for `kAXFocusedWindowChangedNotification`, `kAXWindowCreatedNotification`,
-  `kAXUIElementDestroyedNotification`, `kAXWindowMiniaturizedNotification`. Keep an MRU list of window IDs
-  in `WinTabCore` (pure, tested); unknown windows go after known ones in z-order.
-- Keep enumeration fast: cache the AX app/window elements and update them from the observers instead of
-  querying every app on every key press.
+- `⌘ Tab` is the default shortcut (`HotkeyConfig.commandTab`); menu bar → Shortcut switches between ⌘Tab
+  and ⌥Tab (`ShortcutChoice`, stored in UserDefaults under `shortcut`).
+- The system ⌘Tab / ⌘⇧Tab are turned off with the private `CGSSetSymbolicHotKeyEnabled` (hot keys 1 and 2;
+  ⌘` = 6 stays with the system) – `SystemAppSwitcher` + `CommandTabGuard`. Verified: the off state is
+  global and survives the process, so it is restored by `applicationWillTerminate`, by signal handlers
+  (SIGTERM, SIGINT, crashes) and by a watchdog process `WinTab --watchdog <pid>` that waits for the main
+  process to exit (also SIGKILL / force quit) – it skips the restore when another WinTab instance runs.
+- While secure input is on (password fields, Terminal's Secure Keyboard Entry) event taps get no keys,
+  so the system ⌘Tab is turned back on meanwhile (`IsSecureEventInputEnabled`, polled once a second).
+- The permission is polled once a second; when it is revoked, the tap and focus tracking stop, the
+  system ⌘Tab comes back and the permission window opens.
+- MRU order: `RecentWindows` in WinTabCore (tested) – windows seen focused by recency, never-focused
+  windows behind them in on-screen order, minimized windows last. `FocusTracker` feeds it from
+  `NSWorkspace.didActivateApplicationNotification` and an `AXObserver` per app for
+  `kAXFocusedWindowChangedNotification` (only when that app is frontmost). The focused window is also
+  recorded right before listing, and the switched-to window after switching.
+- When the focused window is not first in the list (e.g. the desktop is focused), forward selection starts
+  on the first window instead of the second.
+- The window list is read outside the event tap callback (any later key event loads it first if needed),
+  with one `AXUIElementCopyMultipleAttributeValues` per window; ~30–40 ms warm with 13 windows, so no cache yet.
 
 ### 3. Window previews
 
@@ -102,8 +111,12 @@ can occasionally stay behind its sibling (public API only, see milestone 4).
 - **Debugging without a keyboard/screen recording:** `WINTAB_LIST=1`, `WINTAB_SNAPSHOT=/x.png`,
   `WINTAB_SWITCH=<n>`, `WINTAB_CYCLE=<n>` (open/close smoke test) – see `main.swift` / README. Crash
   reports: `~/Library/Logs/DiagnosticReports/WinTab-*.ips`.
-- Milestone 1 was verified on macOS 27.0 (MacBook Air): listing, switching between windows of the same app,
-  ⌥Tab / ⇧ / Esc / quick flip / mouse click / minimized windows.
+- Milestones 1 and 2 were verified on macOS 27.0 (MacBook Air) by the user: listing, switching between
+  windows of the same app, Tab / ⇧Tab / Esc / quick flip / mouse click / minimized windows, ⌘Tab replacing
+  the system switcher, switching the shortcut in the menu, ⌘Tab back to the system after Quit. The ⌘Tab
+  restore after SIGKILL / SIGTERM / `pkill` was checked with `CGSIsSymbolicHotKeyEnabled`.
+- **Logging:** `log stream --level debug --predicate 'subsystem == "io.github.furcenzo.wintab"'` shows focus
+  changes and listed windows.
 
 ## Risks
 
@@ -114,5 +127,6 @@ can occasionally stay behind its sibling (public API only, see milestone 4).
 - macOS may periodically ask the user to confirm the Screen Recording permission again (monthly prompts
   since macOS 15) – previews must degrade gracefully to icons.
 - Turning off the system ⌘Tab must always be undone (quit, crash, permission revoked), otherwise the user
-  is left without any app switcher.
+  is left without any app switcher. Covered by the watchdog + signal handlers (milestone 2); if it ever
+  stays off, starting and quitting WinTab, or logging out, brings it back.
 - Not possible in the Mac App Store: the sandbox forbids event taps that swallow keys and the private APIs.

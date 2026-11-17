@@ -6,11 +6,15 @@ import WinTabCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
-    private let switcher = SwitcherController()
+    private static let shortcutDefaultsKey = "shortcut"
+    private var shortcut = ShortcutChoice(storedValue: UserDefaults.standard.string(forKey: shortcutDefaultsKey))
+    private lazy var switcher = SwitcherController(config: shortcut.config)
     private lazy var keyboardTap = KeyboardTap { [unowned self] event in switcher.handle(event) }
+    private lazy var focusTracker = FocusTracker { [unowned self] windowKey in switcher.recordFocus(windowKey) }
+    private let commandTabGuard = CommandTabGuard()
     private let permissionWindow = PermissionWindowController()
     private var statusItem: NSStatusItem?
-    private var permissionTask: Task<Void, Never>?
+    private var monitorTask: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Agent app: no Dock icon, no app menu (LSUIElement in Info.plist does the same for the bundle;
@@ -19,31 +23,51 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // WinTab has no windows most of the time; macOS must not quit it for that ("automatic termination").
         ProcessInfo.processInfo.disableAutomaticTermination("WinTab listens for its keyboard shortcut")
         if runDebugCommand() { return }
+        SystemAppSwitcher.installSignalHandlers()
+        SystemAppSwitcher.startWatchdog()
         setUpStatusItem()
-        startWhenPermitted()
-    }
-
-    // MARK: - Permission
-
-    private func startWhenPermitted() {
-        if AccessibilityPermission.isGranted, keyboardTap.start() {
-            permissionWindow.close()
-            return
-        }
-        permissionWindow.show()
-        // There is no notification for a changed permission – check once a second.
-        permissionTask?.cancel()
-        permissionTask = Task { [weak self] in
+        refreshState(showPermissionWindow: true)
+        // There are no notifications for a changed permission or secure input – check once a second.
+        monitorTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
-                guard let self else { return }
-                if AccessibilityPermission.isGranted, keyboardTap.start() {
-                    permissionWindow.close()
-                    permissionTask = nil
-                    return
-                }
+                self?.refreshState(showPermissionWindow: false)
             }
         }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        keyboardTap.stop()
+        SystemAppSwitcher.setEnabled(true)
+    }
+
+    // MARK: - State
+
+    /// Starts or stops the keyboard tap and focus tracking with the Accessibility permission and decides
+    /// whether the system ⌘Tab has to be off.
+    private func refreshState(showPermissionWindow: Bool) {
+        if AccessibilityPermission.isGranted {
+            if !keyboardTap.isInstalled, keyboardTap.start() { permissionWindow.close() }
+            if keyboardTap.isInstalled, !focusTracker.isRunning { focusTracker.start() }
+        } else if keyboardTap.isInstalled {
+            // The permission was taken away while WinTab runs.
+            switcher.perform(.cancel)
+            keyboardTap.stop()
+            focusTracker.stop()
+            permissionWindow.show()
+        } else if showPermissionWindow {
+            permissionWindow.show()
+        }
+        commandTabGuard.wantsCommandTab = shortcut.replacesSystemSwitcher && keyboardTap.isInstalled
+        commandTabGuard.refreshSecureInput()
+    }
+
+    private func setShortcut(_ choice: ShortcutChoice) {
+        guard choice != shortcut else { return }
+        shortcut = choice
+        UserDefaults.standard.set(choice.rawValue, forKey: Self.shortcutDefaultsKey)
+        switcher.setHotkey(choice.config)
+        refreshState(showPermissionWindow: false)
     }
 
     // MARK: - Menu bar
@@ -57,24 +81,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem = item
     }
 
+    private static func name(of choice: ShortcutChoice) -> String {
+        switch choice {
+        case .commandTab: "⌘Tab"
+        case .optionTab: "⌥Tab"
+        }
+    }
+
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
-        if keyboardTap.isRunning {
-            menu.addItem(disabled: String(localized: "Press ⌥Tab to switch windows"))
+        if keyboardTap.isInstalled {
+            menu.addItem(disabled: String(localized: "Press \(Self.name(of: shortcut)) to switch windows"))
+            if shortcut.replacesSystemSwitcher && commandTabGuard.isSecureInputOn {
+                menu.addItem(disabled: String(localized: "Secure input is on – ⌘Tab shows the system app switcher for now"))
+            }
         } else {
             menu.addItem(disabled: String(localized: "Waiting for the Accessibility permission"))
             menu.addItem(withTitle: String(localized: "Grant Accessibility Permission…"),
                          action: #selector(showPermission), keyEquivalent: "").target = self
         }
         menu.addItem(.separator())
+
+        let shortcutMenu = NSMenu()
+        for choice in ShortcutChoice.allCases {
+            let title = switch choice {
+            case .commandTab: String(localized: "⌘Tab – replaces the system app switcher")
+            case .optionTab: String(localized: "⌥Tab – keeps the system ⌘Tab")
+            }
+            let item = shortcutMenu.addItem(withTitle: title, action: #selector(chooseShortcut(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = choice.rawValue
+            item.state = choice == shortcut ? .on : .off
+        }
+        let shortcutItem = menu.addItem(withTitle: String(localized: "Shortcut"), action: nil, keyEquivalent: "")
+        shortcutItem.submenu = shortcutMenu
+        menu.addItem(.separator())
+
         menu.addItem(withTitle: String(localized: "About WinTab"), action: #selector(showAbout), keyEquivalent: "")
             .target = self
         menu.addItem(withTitle: String(localized: "Quit WinTab"), action: #selector(NSApplication.terminate(_:)),
                      keyEquivalent: "q")
     }
 
+    @objc private func chooseShortcut(_ sender: NSMenuItem) {
+        if let raw = sender.representedObject as? String, let choice = ShortcutChoice(rawValue: raw) {
+            setShortcut(choice)
+        }
+    }
+
     @objc private func showPermission() {
-        startWhenPermitted()
+        permissionWindow.show()
     }
 
     @objc private func showAbout() {
@@ -102,7 +158,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return false
         }
         print("Accessibility permission: \(AccessibilityPermission.isGranted)")
+        print("System ⌘Tab enabled: \(SystemAppSwitcher.isEnabled)")
+        let start = ContinuousClock.now
         let handles = switcher.loadWindows()
+        print("Window list built in \(ContinuousClock.now - start)")
         for (index, handle) in handles.enumerated() {
             let w = handle.window
             print("\(index): [\(w.appName)] \(w.displayTitle) id=\(w.windowID.map(String.init) ?? "-")"
@@ -140,7 +199,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func runOpenCloseCycles(_ cycles: Int) {
         Task { @MainActor in
             for cycle in 1...max(1, cycles) {
+                let start = ContinuousClock.now
                 let count = switcher.loadWindows(reverse: cycle.isMultiple(of: 2)).count
+                let elapsed = ContinuousClock.now - start
                 switcher.debugPanel.present()
                 for _ in 0..<3 {
                     try? await Task.sleep(for: .milliseconds(40))
@@ -149,7 +210,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 try? await Task.sleep(for: .milliseconds(40))
                 switcher.perform(.cancel)
                 try? await Task.sleep(for: .milliseconds(40))
-                print("cycle \(cycle): \(count) windows")
+                print("cycle \(cycle): \(count) windows, listed in \(elapsed)")
             }
             fflush(stdout)
             exit(0)
@@ -162,6 +223,12 @@ extension NSMenu {
         let item = addItem(withTitle: title, action: nil, keyEquivalent: "")
         item.isEnabled = false
     }
+}
+
+// `WinTab --watchdog <pid>`: the helper process started by SystemAppSwitcher.startWatchdog().
+if CommandLine.arguments.count == 3, CommandLine.arguments[1] == SystemAppSwitcher.watchdogArgument,
+   let parentPID = pid_t(CommandLine.arguments[2]) {
+    SystemAppSwitcher.runWatchdog(parentPID: parentPID)
 }
 
 let app = NSApplication.shared

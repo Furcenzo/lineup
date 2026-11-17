@@ -95,4 +95,23 @@ import Testing
         // The next ⌥Tab opens the switcher again.
         #expect(m.handle(.keyDown(KeyCode.tab, .option)).action == .open(reverse: false))
     }
+
+    @Test func commandTabWorksTheSameWay() {
+        var m = HotkeyStateMachine(config: .commandTab)
+        #expect(m.handle(.keyDown(KeyCode.tab, .option)) == .pass)
+        #expect(m.handle(.keyDown(KeyCode.tab, [.command, .option])) == .pass)
+        #expect(m.handle(.keyDown(KeyCode.tab, [.command, .shift])).action == .open(reverse: true))
+        // ⌘Q while the switcher is open must not quit the app underneath.
+        #expect(m.handle(.keyDown(12, .command)) == KeyEventResult(action: nil, swallow: true))
+        #expect(m.handle(.modifiersChanged(.option)).action == .confirm)
+    }
+
+    @Test func shortcutChoiceFromStoredValue() {
+        #expect(ShortcutChoice(storedValue: nil) == .commandTab)
+        #expect(ShortcutChoice(storedValue: "option") == .optionTab)
+        #expect(ShortcutChoice(storedValue: "nonsense") == .commandTab)
+        #expect(ShortcutChoice.commandTab.replacesSystemSwitcher)
+        #expect(!ShortcutChoice.optionTab.replacesSystemSwitcher)
+        #expect(ShortcutChoice.optionTab.config == .optionTab)
+    }
 }
