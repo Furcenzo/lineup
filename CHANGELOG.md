@@ -5,6 +5,8 @@ version into the GitHub Release notes, so add a section before publishing.
 
 ## Unreleased
 
+## 0.1.2
+
 - Opening WinTab again (Finder, Spotlight) while it runs shows its Settings – handy when the menu bar icon
   is hidden.
 
