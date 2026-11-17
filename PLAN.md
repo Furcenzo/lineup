@@ -121,7 +121,10 @@ notifications could replace polling-style refreshes.
   creating the GitHub repository (assumed `Furcenzo/wintab` in `release.sh` / README) and
   `./scripts/release.sh 0.1.0 --publish` are up to the user.
 
-Ideas for later: an app icon (the app has none yet), refreshing an open switcher when the background search
+App icon added afterwards: `scripts/make-icon.swift` → `Assets/AppIcon.icns` (three stacked windows on a blue
+rounded square).
+
+Ideas for later: refreshing an open switcher when the background search
 finds more windows, hidden-app windows on other Spaces, WindowServer notifications instead of polling,
 keyboard shortcuts inside the switcher (Q quit, W close, M minimize), a notarized release once there is an
 Apple Developer ID (permissions would then survive updates).

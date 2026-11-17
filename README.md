@@ -1,5 +1,7 @@
 # WinTab
 
+<img src="Assets/AppIcon.png" alt="WinTab icon" width="128" align="right">
+
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 A window switcher for macOS that works like **Alt+Tab on Windows**: it switches between *windows*, not apps.
@@ -131,7 +133,8 @@ See [CLAUDE.md](CLAUDE.md) for the detailed rules.
 - `Sources/WinTab` – the app: keyboard event tap, ⌘Tab takeover, focus tracking, window list via
   Accessibility, overlay panel, menu bar.
 - `Tests/WinTabCoreTests` – tests for the core logic.
-- `scripts/` – app bundle build, dev signing setup, release, translation check and the Claude Code hook.
+- `Assets/` – the app icon (`AppIcon.icns`, `AppIcon.png`), drawn by `swift scripts/make-icon.swift`.
+- `scripts/` – app bundle build, dev signing setup, icon, release, translation check and the Claude Code hook.
 
 ## Acknowledgments
 

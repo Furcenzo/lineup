@@ -18,5 +18,5 @@ version into the GitHub Release notes, so add a section before publishing.
 - Settings (menu bar → Settings…, ⌘,): shortcut, previews, all desktops, minimized windows, windows of hidden
   apps, excluded apps, which screen shows the switcher, open at login.
 - A welcome window guides you through the Accessibility and Screen Recording permissions and shows their state.
-- Menu bar icon only, no Dock icon.
+- Menu bar icon only, no Dock icon; an app icon for Finder, the About window and the welcome window.
 - English and Slovak user interface.

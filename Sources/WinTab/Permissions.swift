@@ -66,9 +66,9 @@ struct PermissionsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
-                Image(systemName: "rectangle.stack")
-                    .font(.system(size: 34))
-                    .foregroundStyle(Color.accentColor)
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .frame(width: 64, height: 64)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Welcome to WinTab")
                         .font(.title2.bold())

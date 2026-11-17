@@ -39,6 +39,9 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp -f "$BIN" "$APP/Contents/MacOS/WinTab"
 
+# App icon (drawn by scripts/make-icon.swift)
+cp -f Assets/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+
 # Translations (English is the development language, see CLAUDE.md)
 LOCALIZATIONS=()
 for lproj in Sources/WinTab/Resources/*.lproj; do
@@ -57,6 +60,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleIdentifier</key><string>io.github.furcenzo.wintab</string>
     <key>CFBundleExecutable</key><string>WinTab</string>
     <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundleShortVersionString</key><string>${VERSION}</string>
     <key>CFBundleVersion</key><string>${VERSION}</string>
     <key>CFBundleDevelopmentRegion</key><string>en</string>
