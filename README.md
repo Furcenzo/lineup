@@ -5,30 +5,35 @@
 A window switcher for macOS that works like **Alt+Tab on Windows**: it switches between *windows*, not apps.
 Free, minimal, no upsells. Available in English and Slovak (follows the macOS language setting).
 
-> **Status:** early development (milestone 2 of 5, see [PLAN.md](PLAN.md)). Only windows of the current
-> desktop (Space) are listed; window previews and all Spaces come next.
+> **Status:** early development (milestone 3 of 5, see [PLAN.md](PLAN.md)). Only windows of the current
+> desktop (Space) are listed; all Spaces come next.
 
 ## Usage
 
-- Hold **⌘ Command** and press **Tab** – the switcher shows the windows of the current desktop, most recently
-  used first.
+- Hold **⌘ Command** and press **Tab** – the switcher shows previews of the windows on the current desktop,
+  most recently used first.
 - **Tab** / **→** / **↓** – next window, **⇧ Tab** / **←** / **↑** – previous window.
 - Release **⌘** (or press **Return**) – switch to the selected window. A quick ⌘Tab flips to the previous window.
 - **Esc** – close without switching. A mouse click on a window switches to it.
 - Minimized windows are listed at the end and are restored when chosen; windows of hidden apps are shown too.
 
 WinTab lives in the menu bar (no Dock icon). Its menu has **Shortcut**: ⌘Tab (replaces the system app
-switcher, the default) or ⌥Tab (keeps the system ⌘Tab). Quit WinTab from the same menu – the system ⌘Tab
+switcher, the default) or ⌥Tab (keeps the system ⌘Tab), and **Window Previews** (turn off to see app icons
+instead). Quit WinTab from the same menu – the system ⌘Tab
 comes back as soon as WinTab quits, crashes or is force-quit (a small watchdog process, also called WinTab,
 takes care of that). In password fields and with Terminal's Secure Keyboard Entry macOS hides key presses
 from all apps, so ⌘Tab shows the system app switcher there.
 
 ## Permissions
 
-WinTab needs the **Accessibility** permission to notice the shortcut, read the list of windows and bring
-the chosen one to the front. On the first start it shows a window with a button to
-**System Settings → Privacy & Security → Accessibility**; turn WinTab on there. WinTab does not record or
-send anything.
+- **Accessibility** (required) – to notice the shortcut, read the list of windows and bring the chosen one to
+  the front. On the first start WinTab shows a window with a button to
+  **System Settings → Privacy & Security → Accessibility**; turn WinTab on there.
+- **Screen & System Audio Recording** (optional) – for window previews. macOS asks once; turn WinTab on in
+  **System Settings → Privacy & Security → Screen & System Audio Recording** and let macOS quit and reopen it.
+  Without it WinTab shows app icons. macOS may ask from time to time to confirm this permission again.
+
+WinTab only uses this to draw small window images in the switcher; it does not store or send anything.
 
 ## Requirements
 

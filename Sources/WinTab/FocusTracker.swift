@@ -13,13 +13,13 @@ import WinTabCore
 /// Needs the Accessibility permission; call `start()` once it is granted.
 @MainActor
 final class FocusTracker {
-    /// Called with the `SwitcherWindow.id` of the window that just got the focus.
-    private let onFocus: (String) -> Void
+    /// Called with the ID of the window that just got the focus.
+    private let onFocus: (CGWindowID) -> Void
     private var observers = [pid_t: AXObserver]()
     private var workspaceTokens = [NSObjectProtocol]()
     private(set) var isRunning = false
 
-    init(onFocus: @escaping (String) -> Void) {
+    init(onFocus: @escaping (CGWindowID) -> Void) {
         self.onFocus = onFocus
     }
 
@@ -82,13 +82,13 @@ final class FocusTracker {
     }
 
     private func recordFocusedWindow(of pid: pid_t) {
-        if let id = Self.focusedWindowID(of: pid) { onFocus(SwitcherWindow.id(windowID: id)) }
+        if let id = Self.focusedWindowID(of: pid) { onFocus(id) }
     }
 
     fileprivate func focusedWindowChanged(pid: pid_t, windowID: CGWindowID?) {
         // A background app moving the focus between its own windows is not the user's focus.
         guard let windowID, NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else { return }
-        onFocus(SwitcherWindow.id(windowID: windowID))
+        onFocus(windowID)
     }
 
     private func observe(_ pid: pid_t, attempt: Int) {

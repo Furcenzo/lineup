@@ -5,14 +5,15 @@ Agent app (`LSUIElement`, menu bar icon only). **Read [PLAN.md](PLAN.md) first**
 notes and risks; update it when a milestone is done or the plan changes.
 
 - `Sources/WinTabCore` – pure logic, no AppKit: window list building (`WindowListBuilder`), MRU order
-  (`RecentWindows`), selection (`Selection`), hotkey state machine + shortcut setting (`HotkeyStateMachine`,
+  (`RecentWindows`), tile grid and thumbnail sizes (`GridLayout`, `aspectFit`), selection (`Selection`), hotkey state machine + shortcut setting (`HotkeyStateMachine`,
   `ShortcutChoice`). Tested in `Tests/WinTabCoreTests`.
 - `Sources/CPrivate` – C declarations of private macOS APIs (`_AXUIElementGetWindow`,
   `CGSSetSymbolicHotKeyEnabled`, later more SkyLight/CGS). Keep every private API here and always have a
   public fallback.
 - `Sources/WinTab` – the app: `KeyboardTap` (CGEventTap), `FocusTracker` (AXObserver + NSWorkspace → MRU),
   `SystemAppSwitcher` (turning the system ⌘Tab off/on, signal handlers, `--watchdog` process),
-  `WindowSource` (AX + CGWindowList, switching), `SwitcherController`, `SwitcherPanel` (non-activating
+  `WindowSource` (AX + CGWindowList, switching), `ThumbnailStore` + `ScreenRecordingPermission`
+  (ScreenCaptureKit previews), `SwitcherController`, `SwitcherPanel` (non-activating
   NSPanel + SwiftUI), `Permissions`, `main.swift` (menu bar, state polling, debug commands).
 
 **Never leave the system ⌘Tab turned off.** Its state is global and outlives WinTab. Any code path that
@@ -24,7 +25,7 @@ build + restart: `./scripts/run.sh [sk|en]`.
 
 ## Code signing and permissions
 
-WinTab needs the Accessibility permission (later also Screen Recording). macOS ties it to the code signature,
+WinTab needs the Accessibility permission and, for previews, Screen Recording. macOS ties it to the code signature,
 so development builds are signed with the local self-signed certificate **"WinTab Local Dev"**
 (`scripts/build-app.sh` uses it automatically when it exists, otherwise signs ad-hoc with a warning).
 The certificate is created once by the user with `./scripts/setup-dev-signing.sh` – it needs the login

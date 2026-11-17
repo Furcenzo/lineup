@@ -58,15 +58,21 @@ can occasionally stay behind its sibling (public API only, see milestone 4).
 - The window list is read outside the event tap callback (any later key event loads it first if needed),
   with one `AXUIElementCopyMultipleAttributeValues` per window; ~30–40 ms warm with 13 windows, so no cache yet.
 
-### 3. Window previews
+### 3. Window previews ✅ (2026-11-17)
 
-- Thumbnails with ScreenCaptureKit: `SCShareableContent` + `SCScreenshotManager.captureImage(contentFilter:
-  configuration:)` per window (`SCContentFilter(desktopIndependentWindow:)`), scaled to the tile size.
-- Cache thumbnails per window ID; refresh in the background when the switcher opens and after focus
-  changes; show the cached image immediately, the app icon until there is one.
-- Screen Recording permission: check `CGPreflightScreenCaptureAccess()`, request with
-  `CGRequestScreenCaptureAccess()`; without it fall back to icons (milestone 1 look).
-- Bigger tiles (thumbnail with a small app icon in the corner), title below.
+- `ThumbnailStore` (Thumbnails.swift): `SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly:
+  true)` + `SCScreenshotManager.captureImage` with `SCContentFilter(desktopIndependentWindow:)`, at most
+  480×300 px (`aspectFit`, tested), captured in parallel; ~110 ms for 11 windows including the content query.
+- Cache per window ID: the switcher shows cached thumbnails at once and refreshes the listed visible windows
+  when it opens; the window that loses the focus is captured too (so minimized / hidden windows keep a
+  recent image – they can't be captured themselves). Entries of windows not listed for 30 min are dropped.
+- Tiles: 232×196 pt with the thumbnail and the app icon as a badge; app icon until a thumbnail exists; icon
+  tiles (milestone 1 look) when previews are off or not permitted. `GridLayout` (tested) balances rows and
+  shrinks tiles down to 50 % when they don't fit 80 % of the screen height.
+- Menu bar → "Window Previews" (UserDefaults `previews`, default on) and "Allow Screen Recording for
+  Previews…" while the permission is missing. The system prompt (`CGRequestScreenCaptureAccess`) is shown
+  once automatically (`askedForScreenRecording`), only after Accessibility is granted. The permission is
+  polled with the rest of the state every second (`CGPreflightScreenCaptureAccess`).
 
 ### 4. All Spaces, minimized, fullscreen, precise focus (private APIs)
 
@@ -111,12 +117,13 @@ can occasionally stay behind its sibling (public API only, see milestone 4).
 - **Debugging without a keyboard/screen recording:** `WINTAB_LIST=1`, `WINTAB_SNAPSHOT=/x.png`,
   `WINTAB_SWITCH=<n>`, `WINTAB_CYCLE=<n>` (open/close smoke test) – see `main.swift` / README. Crash
   reports: `~/Library/Logs/DiagnosticReports/WinTab-*.ips`.
-- Milestones 1 and 2 were verified on macOS 27.0 (MacBook Air) by the user: listing, switching between
+- Milestones 1–3 were verified on macOS 27.0 (MacBook Air) by the user: listing, switching between
   windows of the same app, Tab / ⇧Tab / Esc / quick flip / mouse click / minimized windows, ⌘Tab replacing
-  the system switcher, switching the shortcut in the menu, ⌘Tab back to the system after Quit. The ⌘Tab
+  the system switcher, switching the shortcut in the menu, ⌘Tab back to the system after Quit, previews
+(thumbnails, minimized windows, turning previews off) without noticeable delay. The ⌘Tab
   restore after SIGKILL / SIGTERM / `pkill` was checked with `CGSIsSymbolicHotKeyEnabled`.
 - **Logging:** `log stream --level debug --predicate 'subsystem == "io.github.furcenzo.wintab"'` shows focus
-  changes and listed windows.
+  changes, listed windows and thumbnail capture times.
 
 ## Risks
 

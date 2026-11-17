@@ -10,7 +10,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var shortcut = ShortcutChoice(storedValue: UserDefaults.standard.string(forKey: shortcutDefaultsKey))
     private lazy var switcher = SwitcherController(config: shortcut.config)
     private lazy var keyboardTap = KeyboardTap { [unowned self] event in switcher.handle(event) }
-    private lazy var focusTracker = FocusTracker { [unowned self] windowKey in switcher.recordFocus(windowKey) }
+    private lazy var focusTracker = FocusTracker { [unowned self] windowID in switcher.recordFocus(windowID: windowID) }
+    private static let previewsDefaultsKey = "previews"
+    private static let askedScreenRecordingKey = "askedForScreenRecording"
+    /// Window previews switched on in the menu (default on); they also need the Screen Recording permission.
+    private var previewsWanted = UserDefaults.standard.object(forKey: previewsDefaultsKey) as? Bool ?? true
     private let commandTabGuard = CommandTabGuard()
     private let permissionWindow = PermissionWindowController()
     private var statusItem: NSStatusItem?
@@ -22,11 +26,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.setActivationPolicy(.accessory)
         // WinTab has no windows most of the time; macOS must not quit it for that ("automatic termination").
         ProcessInfo.processInfo.disableAutomaticTermination("WinTab listens for its keyboard shortcut")
+        switcher.setPreviews(previewsWanted && ScreenRecordingPermission.isGranted)
         if runDebugCommand() { return }
         SystemAppSwitcher.installSignalHandlers()
         SystemAppSwitcher.startWatchdog()
         setUpStatusItem()
         refreshState(showPermissionWindow: true)
+        askForScreenRecordingOnce()
         // There are no notifications for a changed permission or secure input – check once a second.
         monitorTask = Task { [weak self] in
             while !Task.isCancelled {
@@ -60,6 +66,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         commandTabGuard.wantsCommandTab = shortcut.replacesSystemSwitcher && keyboardTap.isInstalled
         commandTabGuard.refreshSecureInput()
+        switcher.setPreviews(previewsWanted && ScreenRecordingPermission.isGranted)
+    }
+
+    /// The first time previews are wanted without the permission, show the system prompt once
+    /// (once Accessibility is granted, so a new user doesn't get two permission requests at the same time).
+    private func askForScreenRecordingOnce() {
+        guard previewsWanted, !ScreenRecordingPermission.isGranted,
+              !UserDefaults.standard.bool(forKey: Self.askedScreenRecordingKey) else { return }
+        Task { [weak self] in
+            while !AccessibilityPermission.isGranted {
+                try? await Task.sleep(for: .seconds(2))
+                if self == nil { return }
+            }
+            UserDefaults.standard.set(true, forKey: Self.askedScreenRecordingKey)
+            ScreenRecordingPermission.request()
+        }
+    }
+
+    private func setPreviewsWanted(_ wanted: Bool) {
+        previewsWanted = wanted
+        UserDefaults.standard.set(wanted, forKey: Self.previewsDefaultsKey)
+        if wanted && !ScreenRecordingPermission.isGranted { allowScreenRecording() }
+        refreshState(showPermissionWindow: false)
     }
 
     private func setShortcut(_ choice: ShortcutChoice) {
@@ -115,6 +144,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         let shortcutItem = menu.addItem(withTitle: String(localized: "Shortcut"), action: nil, keyEquivalent: "")
         shortcutItem.submenu = shortcutMenu
+
+        let previewsItem = menu.addItem(withTitle: String(localized: "Window Previews"),
+                                        action: #selector(togglePreviews), keyEquivalent: "")
+        previewsItem.target = self
+        previewsItem.state = previewsWanted ? .on : .off
+        if previewsWanted && !ScreenRecordingPermission.isGranted {
+            menu.addItem(withTitle: String(localized: "Allow Screen Recording for Previews…"),
+                         action: #selector(allowScreenRecording), keyEquivalent: "").target = self
+        }
         menu.addItem(.separator())
 
         menu.addItem(withTitle: String(localized: "About WinTab"), action: #selector(showAbout), keyEquivalent: "")
@@ -127,6 +165,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if let raw = sender.representedObject as? String, let choice = ShortcutChoice(rawValue: raw) {
             setShortcut(choice)
         }
+    }
+
+    @objc private func togglePreviews() {
+        setPreviewsWanted(!previewsWanted)
+    }
+
+    @objc private func allowScreenRecording() {
+        ScreenRecordingPermission.request()
+        ScreenRecordingPermission.openSettings()
     }
 
     @objc private func showPermission() {
@@ -159,6 +206,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         print("Accessibility permission: \(AccessibilityPermission.isGranted)")
         print("System ⌘Tab enabled: \(SystemAppSwitcher.isEnabled)")
+        print("Screen Recording permission: \(ScreenRecordingPermission.isGranted), previews: \(switcher.showsPreviews)")
         let start = ContinuousClock.now
         let handles = switcher.loadWindows()
         print("Window list built in \(ContinuousClock.now - start)")
@@ -168,12 +216,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 + (w.isMinimized ? " minimized" : "") + (w.isAppHidden ? " hidden" : ""))
         }
         if let path = env["WINTAB_SNAPSHOT"] {
-            do {
-                try switcher.debugPanel.snapshot(to: URL(fileURLWithPath: path))
-                print("Snapshot: \(path)")
-            } catch {
-                print("Snapshot failed: \(error)")
+            Task { @MainActor in
+                // Thumbnails arrive asynchronously.
+                if switcher.showsPreviews { try? await Task.sleep(for: .seconds(1.5)) }
+                do {
+                    try switcher.debugPanel.snapshot(to: URL(fileURLWithPath: path))
+                    print("Snapshot: \(path)")
+                } catch {
+                    print("Snapshot failed: \(error)")
+                }
+                fflush(stdout)
+                exit(0)
             }
+            return true
         }
         if let n = env["WINTAB_SWITCH"].flatMap(Int.init), handles.indices.contains(n) {
             print("Switching to \(n): \(handles[n].window.displayTitle)")

@@ -3,34 +3,60 @@
 
 import AppKit
 import SwiftUI
+import WinTabCore
 
 /// What the switcher overlay shows.
 @MainActor @Observable
 final class SwitcherModel {
     struct Item: Identifiable {
         let id: String
+        let windowID: UInt32?
         let title: String
         let appName: String
         let icon: NSImage?
         let isMinimized: Bool
+        var thumbnail: NSImage?
     }
 
     var items = [Item]()
     var selectedIndex: Int?
-    var columns = 1
+    /// Big tiles with window thumbnails instead of app icons.
+    var showsPreviews = false
+    var layout = GridLayout(columns: 1, rows: 1, scale: 1)
     /// Mouse hover over an item.
     var onHover: (Int) -> Void = { _ in }
     /// Mouse click on an item.
     var onClick: (Int) -> Void = { _ in }
+
+    var metrics: TileMetrics { TileMetrics(previews: showsPreviews, scale: layout.scale) }
+
+    func setThumbnail(_ image: NSImage, for windowID: UInt32) {
+        guard let index = items.firstIndex(where: { $0.windowID == windowID }) else { return }
+        items[index].thumbnail = image
+    }
 }
 
-/// Layout constants shared by the view and the panel sizing.
-enum SwitcherLayout {
-    static let tileWidth: CGFloat = 128
-    static let tileHeight: CGFloat = 124
-    static let iconSize: CGFloat = 72
+/// Sizes of one tile; tiles shrink (`scale`) when many windows have to fit on the screen.
+struct TileMetrics {
     static let spacing: CGFloat = 8
     static let padding: CGFloat = 18
+
+    let tileWidth: CGFloat
+    let tileHeight: CGFloat
+    /// The box the thumbnail (or the big icon) is fitted into.
+    let imageWidth: CGFloat
+    let imageHeight: CGFloat
+    /// The app icon: alone in icon mode, a badge on the thumbnail in preview mode.
+    let iconSize: CGFloat
+
+    init(previews: Bool, scale: Double = 1) {
+        let s = CGFloat(scale)
+        if previews {
+            (tileWidth, tileHeight, imageWidth, imageHeight, iconSize) = (232 * s, 196 * s, 216 * s, 138 * s, 36 * s)
+        } else {
+            (tileWidth, tileHeight, imageWidth, imageHeight, iconSize) = (128 * s, 124 * s, 72 * s, 72 * s, 72 * s)
+        }
+    }
 }
 
 /// The floating overlay. It is a non-activating panel: it never becomes the key window and never
@@ -58,11 +84,15 @@ final class SwitcherPanel: NSPanel {
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
 
+    /// The screen with the mouse pointer – where the switcher appears.
+    static var currentScreen: NSScreen? {
+        NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }
+            ?? NSScreen.main ?? NSScreen.screens.first
+    }
+
     /// Sizes the panel for the current items and shows it centered on the screen with the mouse pointer.
     func present() {
-        let screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }
-            ?? NSScreen.main ?? NSScreen.screens.first
-        guard let screen else { return }
+        guard let screen = Self.currentScreen else { return }
         layout(for: screen.visibleFrame)
         let size = hostingView.fittingSize
         let frame = screen.visibleFrame
@@ -71,11 +101,15 @@ final class SwitcherPanel: NSPanel {
         orderFrontRegardless()
     }
 
-    /// Picks the number of columns so the grid fits into 90 % of the screen width.
+    /// Fits the grid into 90 % of the screen width and 80 % of its height (minus the title line).
     func layout(for visibleFrame: NSRect) {
-        let available = visibleFrame.width * 0.9 - 2 * SwitcherLayout.padding
-        let fitting = Int((available + SwitcherLayout.spacing) / (SwitcherLayout.tileWidth + SwitcherLayout.spacing))
-        model.columns = max(1, min(model.items.count, fitting))
+        let full = TileMetrics(previews: model.showsPreviews)
+        let titleLine: CGFloat = 34
+        model.layout = GridLayout.fit(
+            count: model.items.count, tileWidth: full.tileWidth, tileHeight: full.tileHeight,
+            spacing: TileMetrics.spacing,
+            availableWidth: visibleFrame.width * 0.9 - 2 * TileMetrics.padding,
+            availableHeight: visibleFrame.height * 0.8 - 2 * TileMetrics.padding - titleLine)
         hostingView.layoutSubtreeIfNeeded()
     }
 
@@ -115,7 +149,7 @@ struct SwitcherView: View {
                     .frame(maxWidth: gridWidth)
             }
         }
-        .padding(SwitcherLayout.padding)
+        .padding(TileMetrics.padding)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(.white.opacity(0.12)))
         .fixedSize()
@@ -128,7 +162,8 @@ struct SwitcherView: View {
     }
 
     private var gridWidth: CGFloat {
-        CGFloat(model.columns) * SwitcherLayout.tileWidth + CGFloat(model.columns - 1) * SwitcherLayout.spacing
+        let columns = CGFloat(max(1, model.layout.columns))
+        return columns * model.metrics.tileWidth + (columns - 1) * TileMetrics.spacing
     }
 
     /// An item with its position. Views get the item itself, never an index to look up later: SwiftUI may
@@ -140,46 +175,30 @@ struct SwitcherView: View {
     }
 
     private var grid: some View {
-        let columns = max(1, model.columns)
+        let columns = max(1, model.layout.columns)
         let entries = model.items.enumerated().map { Entry(index: $0.offset, item: $0.element) }
         let rows = stride(from: 0, to: entries.count, by: columns).map {
             Array(entries[$0..<min($0 + columns, entries.count)])
         }
-        return VStack(alignment: .leading, spacing: SwitcherLayout.spacing) {
+        let metrics = model.metrics
+        return VStack(alignment: .leading, spacing: TileMetrics.spacing) {
             ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                HStack(spacing: SwitcherLayout.spacing) {
+                HStack(spacing: TileMetrics.spacing) {
                     ForEach(row) { entry in
-                        tile(entry)
+                        tile(entry, metrics: metrics)
                     }
                 }
             }
         }
     }
 
-    private func tile(_ entry: Entry) -> some View {
+    private func tile(_ entry: Entry, metrics: TileMetrics) -> some View {
         let item = entry.item
         let index = entry.index
         let isSelected = index == model.selectedIndex
         return VStack(spacing: 6) {
-            Group {
-                if let icon = item.icon {
-                    Image(nsImage: icon).resizable()
-                } else {
-                    Image(systemName: "macwindow").resizable().foregroundStyle(.secondary)
-                }
-            }
-            .aspectRatio(contentMode: .fit)
-            .frame(width: SwitcherLayout.iconSize, height: SwitcherLayout.iconSize)
-            .opacity(item.isMinimized ? 0.55 : 1)
-            .overlay(alignment: .bottomTrailing) {
-                if item.isMinimized {
-                    Image(systemName: "minus.circle.fill")
-                        .symbolRenderingMode(.palette)
-                        .foregroundStyle(.white, .orange)
-                        .font(.title3)
-                        .help("Minimized")
-                }
-            }
+            image(for: item, metrics: metrics)
+                .frame(width: metrics.imageWidth, height: metrics.imageHeight)
             Text(verbatim: item.title)
                 .font(.caption)
                 .lineLimit(2)
@@ -187,7 +206,7 @@ struct SwitcherView: View {
                 .frame(maxWidth: .infinity, alignment: .top)
         }
         .padding(8)
-        .frame(width: SwitcherLayout.tileWidth, height: SwitcherLayout.tileHeight, alignment: .top)
+        .frame(width: metrics.tileWidth, height: metrics.tileHeight, alignment: .top)
         .background(isSelected ? AnyShapeStyle(Color.accentColor.opacity(0.35)) : AnyShapeStyle(.clear),
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay {
@@ -198,5 +217,53 @@ struct SwitcherView: View {
         .contentShape(Rectangle())
         .onHover { inside in if inside { model.onHover(index) } }
         .onTapGesture { model.onClick(index) }
+    }
+
+    /// Preview mode: the thumbnail with the app icon as a badge (or a big icon until there is a thumbnail).
+    /// Icon mode: the app icon.
+    @ViewBuilder
+    private func image(for item: SwitcherModel.Item, metrics: TileMetrics) -> some View {
+        if model.showsPreviews, let thumbnail = item.thumbnail {
+            Image(nsImage: thumbnail)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .shadow(color: .black.opacity(0.25), radius: 3, y: 1)
+                .opacity(item.isMinimized ? 0.6 : 1)
+                .frame(width: metrics.imageWidth, height: metrics.imageHeight)
+                .overlay(alignment: .bottomTrailing) {
+                    appIcon(item, size: metrics.iconSize)
+                        .overlay(alignment: .topLeading) { minimizedBadge(item) }
+                        .offset(x: 4, y: 4)
+                }
+        } else {
+            let size = model.showsPreviews ? min(metrics.imageHeight * 0.7, 96) : metrics.iconSize
+            appIcon(item, size: size)
+                .opacity(item.isMinimized ? 0.55 : 1)
+                .overlay(alignment: .bottomTrailing) { minimizedBadge(item) }
+        }
+    }
+
+    private func appIcon(_ item: SwitcherModel.Item, size: CGFloat) -> some View {
+        Group {
+            if let icon = item.icon {
+                Image(nsImage: icon).resizable()
+            } else {
+                Image(systemName: "macwindow").resizable().foregroundStyle(.secondary)
+            }
+        }
+        .aspectRatio(contentMode: .fit)
+        .frame(width: size, height: size)
+    }
+
+    @ViewBuilder
+    private func minimizedBadge(_ item: SwitcherModel.Item) -> some View {
+        if item.isMinimized {
+            Image(systemName: "minus.circle.fill")
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(.white, .orange)
+                .font(.title3)
+                .help("Minimized")
+        }
     }
 }

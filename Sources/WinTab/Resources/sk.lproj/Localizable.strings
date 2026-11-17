@@ -6,6 +6,7 @@
 "3. This window closes by itself and the shortcut starts working." = "3. Toto okno sa samo zavrie a skratka začne fungovať.";
 "A window switcher like Alt+Tab on Windows. Free software under the GNU GPL v3 or later." = "Prepínač okien ako Alt+Tab vo Windows. Slobodný softvér pod licenciou GNU GPL v3 alebo novšou.";
 "About WinTab" = "O aplikácii WinTab";
+"Allow Screen Recording for Previews…" = "Povoliť nahrávanie obrazovky pre náhľady…";
 "Grant Accessibility Permission…" = "Udeliť povolenie Prístupnosť…";
 "It lets WinTab notice its keyboard shortcut, list the windows of your apps and bring the one you pick to the front. WinTab does not record or send anything." = "Vďaka nemu WinTab zachytí svoju klávesovú skratku, zistí okná vašich aplikácií a vybrané okno presunie dopredu. WinTab nič nenahráva ani neodosiela.";
 "Minimized" = "Minimalizované";
@@ -16,6 +17,7 @@
 "Secure input is on – ⌘Tab shows the system app switcher for now" = "Je zapnuté zabezpečené zadávanie – ⌘Tab zatiaľ ukazuje systémový prepínač aplikácií";
 "Shortcut" = "Skratka";
 "Waiting for the Accessibility permission" = "Čaká sa na povolenie Prístupnosť";
+"Window Previews" = "Náhľady okien";
 "WinTab needs the Accessibility permission" = "WinTab potrebuje povolenie Prístupnosť";
 "WinTab – Accessibility Permission" = "WinTab – povolenie Prístupnosť";
 "⌘Tab – replaces the system app switcher" = "⌘Tab – nahradí systémový prepínač aplikácií";

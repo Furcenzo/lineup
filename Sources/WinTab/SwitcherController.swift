@@ -21,12 +21,16 @@ final class SwitcherController {
     private var selection = Selection(count: 0)
     private var recent = RecentWindows()
     private let panel = SwitcherPanel()
+    private let thumbnails = ThumbnailStore()
+    /// The window that had the focus last – captured when it loses the focus.
+    private var lastFocusedID: CGWindowID?
     private var showTask: Task<Void, Never>?
     /// Set (to the `reverse` flag) while the window list of a just-opened switcher has not been read yet.
     private var pendingLoad: Bool?
 
     init(config: HotkeyConfig) {
         machine = HotkeyStateMachine(config: config)
+        thumbnails.onUpdate = { [weak self] windowID, image in self?.panel.model.setThumbnail(image, for: windowID) }
         panel.model.onHover = { [weak self] index in self?.select(index) }
         panel.model.onClick = { [weak self] index in
             guard let self else { return }
@@ -44,10 +48,24 @@ final class SwitcherController {
         machine = HotkeyStateMachine(config: config)
     }
 
+    /// Window thumbnails instead of app icons (needs the Screen Recording permission).
+    var showsPreviews: Bool { thumbnails.isEnabled }
+
+    func setPreviews(_ enabled: Bool) {
+        guard enabled != thumbnails.isEnabled else { return }
+        close()
+        thumbnails.isEnabled = enabled
+        panel.model.showsPreviews = enabled
+        if !enabled { thumbnails.removeAll() }
+    }
+
     /// A window got the focus (from `FocusTracker`).
-    func recordFocus(_ windowKey: String) {
-        log.debug("focus \(windowKey, privacy: .public)")
-        recent.touch(windowKey)
+    func recordFocus(windowID: CGWindowID) {
+        log.debug("focus w\(windowID)")
+        recent.touch(SwitcherWindow.id(windowID: windowID))
+        // The window that just lost the focus is still visible – a good moment for a fresh thumbnail.
+        if let previous = lastFocusedID, previous != windowID { thumbnails.refresh([previous]) }
+        lastFocusedID = windowID
     }
 
     /// Called by the keyboard tap for every key event; returns true to swallow it.
@@ -72,7 +90,7 @@ final class SwitcherController {
     func loadWindows(reverse: Bool = false) -> [WindowHandle] {
         let focusedID = NSWorkspace.shared.frontmostApplication
             .flatMap { FocusTracker.focusedWindowID(of: $0.processIdentifier) }
-        if let focusedID { recent.touch(SwitcherWindow.id(windowID: focusedID)) }
+        if let focusedID { recordFocus(windowID: focusedID) }
 
         let unordered = WindowSource.currentWindows()
         let byID = Dictionary(unordered.map { ($0.window.id, $0) }, uniquingKeysWith: { first, _ in first })
@@ -81,10 +99,17 @@ final class SwitcherController {
         let firstIsCurrent = focusedID != nil && handles.first?.window.windowID == focusedID
         selection = Selection(count: handles.count, reverse: reverse, firstIsCurrent: firstIsCurrent)
         panel.model.items = handles.map {
-            SwitcherModel.Item(id: $0.window.id, title: $0.window.displayTitle, appName: $0.window.appName,
-                               icon: $0.icon, isMinimized: $0.window.isMinimized)
+            SwitcherModel.Item(id: $0.window.id, windowID: $0.window.windowID, title: $0.window.displayTitle,
+                               appName: $0.window.appName, icon: $0.icon, isMinimized: $0.window.isMinimized,
+                               thumbnail: $0.window.windowID.flatMap(thumbnails.image(for:)))
         }
         updateSelection()
+        if thumbnails.isEnabled {
+            // Minimized windows and windows of hidden apps can't be captured – they keep their cached thumbnail.
+            let capturable = handles.filter { !$0.window.isMinimized && !$0.window.isAppHidden }.compactMap(\.window.windowID)
+            thumbnails.refresh(capturable)
+            thumbnails.prune(keeping: Set(handles.compactMap(\.window.windowID)))
+        }
         log.debug("listed \(self.handles.count) windows: \(self.handles.map(\.window.id).joined(separator: " "), privacy: .public)")
         return handles
     }
@@ -125,7 +150,7 @@ final class SwitcherController {
         close()
         guard let target else { return }
         WindowSource.activate(target)
-        recent.touch(target.window.id)
+        if let id = target.window.windowID { recordFocus(windowID: id) } else { recent.touch(target.window.id) }
     }
 
     private func close() {
