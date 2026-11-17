@@ -7,6 +7,18 @@
 A window switcher for macOS that works like **Alt+Tab on Windows**: it switches between *windows*, not apps.
 Free, minimal, no upsells. Available in English and Slovak (follows the macOS language setting).
 
+## Screenshots
+
+Hold ⌘ and press Tab – window previews of all your desktops, most recently used first. The selected window has
+a × to close it (with ⇧ held: force quit its app).
+
+![The WinTab switcher with four window previews](Assets/screenshots/switcher.png)
+
+<p>
+  <img src="Assets/screenshots/settings.png" alt="WinTab settings" width="49%">
+  <img src="Assets/screenshots/welcome.png" alt="WinTab welcome window with the two permissions" width="49%">
+</p>
+
 ## Download
 
 Get the latest **WinTab-x.y.z.zip** from [Releases](https://github.com/Furcenzo/wintab/releases/latest)
@@ -97,7 +109,9 @@ The binary inside the bundle accepts environment variables (output on stdout):
   with `WINTAB_VIEW=settings` or `permissions` an image of that window),
 - `WINTAB_SWITCH=<n>` – switch to the n-th window of the list and print which window is in front afterwards,
 - `WINTAB_CYCLE=<n>` – open, move and close the switcher overlay n times (smoke test) and quit,
-- `WINTAB_SPACES=1` – print the desktops (Spaces), the windows on them and what the private APIs find.
+- `WINTAB_SPACES=1` – print the desktops (Spaces), the windows on them and what the private APIs find,
+- `WINTAB_ONLY_APPS=com.apple.Safari,…` – list only these apps (for screenshots with demo windows; the README
+  screenshots show Safari, Preview, Calculator and Font Book).
 
 The running app logs focus changes and window lists:
 
@@ -133,7 +147,8 @@ See [CLAUDE.md](CLAUDE.md) for the detailed rules.
 - `Sources/WinTab` – the app: keyboard event tap, ⌘Tab takeover, focus tracking, window list via
   Accessibility, overlay panel, menu bar.
 - `Tests/WinTabCoreTests` – tests for the core logic.
-- `Assets/` – the app icon (`AppIcon.icns`, `AppIcon.png`), drawn by `swift scripts/make-icon.swift`.
+- `Assets/` – the app icon (`AppIcon.icns`, `AppIcon.png`), drawn by `swift scripts/make-icon.swift`, and the
+  README screenshots (`screenshots/`).
 - `scripts/` – app bundle build, dev signing setup, icon, release, translation check and the Claude Code hook.
 
 ## Acknowledgments

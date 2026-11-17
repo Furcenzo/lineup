@@ -71,6 +71,8 @@ public struct ListOptions: Sendable, Equatable {
     public var includeHiddenApps: Bool
     /// Apps whose windows are never listed.
     public var excludedBundleIDs: Set<String>
+    /// When set, only these apps are listed (used for demo screenshots).
+    public var onlyBundleIDs: Set<String>?
 
     public init(includeMinimized: Bool = true, includeHiddenApps: Bool = true, excludedBundleIDs: Set<String> = []) {
         self.includeMinimized = includeMinimized; self.includeHiddenApps = includeHiddenApps
@@ -79,6 +81,7 @@ public struct ListOptions: Sendable, Equatable {
 
     /// Whether the app's windows may be listed at all.
     public func includes(_ app: AppInfo) -> Bool {
+        if let onlyBundleIDs { return app.bundleID.map(onlyBundleIDs.contains) ?? false }
         guard let bundleID = app.bundleID else { return true }
         return !excludedBundleIDs.contains(bundleID)
     }

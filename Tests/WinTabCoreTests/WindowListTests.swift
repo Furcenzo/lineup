@@ -188,4 +188,12 @@ import Testing
     @Test func appsWithoutBundleIDAreNeverExcluded() {
         #expect(ListOptions(excludedBundleIDs: ["x"]).includes(AppInfo(pid: 1, name: "Script")))
     }
+
+    @Test func onlyBundleIDsListsJustThoseApps() {
+        var options = ListOptions()
+        options.onlyBundleIDs = ["com.apple.Safari"]
+        #expect(options.includes(AppInfo(pid: 1, name: "Safari", bundleID: "com.apple.Safari")))
+        #expect(!options.includes(AppInfo(pid: 2, name: "Mail", bundleID: "com.apple.mail")))
+        #expect(!options.includes(AppInfo(pid: 3, name: "Script")))
+    }
 }

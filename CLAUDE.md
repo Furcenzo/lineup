@@ -41,10 +41,18 @@ Accessibility and add it again.
 Testing without a keyboard (results on stdout; `open --stdout <file> --env …` works too):
 `build/WinTab.app/Contents/MacOS/WinTab` with `WINTAB_LIST=1` (print the window list),
 `WINTAB_SNAPSHOT=/x.png` (render the overlay to PNG, no screen recording needed), `WINTAB_CYCLE=<n>`
-(open/close smoke test), `WINTAB_SPACES=1` (private Space APIs report) or `WINTAB_SWITCH=<n>`
+(open/close smoke test), `WINTAB_SPACES=1` (private Space APIs report), `WINTAB_VIEW=settings|permissions`
+with `WINTAB_SNAPSHOT` (image of those windows), `WINTAB_ONLY_APPS=<bundle IDs>` (list only those apps) or
+`WINTAB_SWITCH=<n>`
 (switch to the n-th window and print the frontmost app/window). Run the binary inside the signed bundle –
 the permission belongs to the bundle. Debug runs never touch the system ⌘Tab. The running app logs focus
 changes: `log stream --level debug --predicate 'subsystem == "io.github.furcenzo.wintab"'`.
+
+**Screenshots** (`Assets/screenshots/`, used by the README) must never show the user's real windows – they
+contain chats, phone numbers and the user's name (even window titles, e.g. Chess shows the account name, the
+Clock shows the city). Open neutral demo apps that are not running yet (Safari on the WinTab GitHub page,
+Preview with the icon, Calculator, Font Book), check their titles with `WINTAB_LIST=1` first, snapshot with
+`WINTAB_ONLY_APPS`, then quit only those demo apps. Ask the user before opening apps on their Mac.
 
 ## Localization – the app is bilingual (English + Slovak)
 

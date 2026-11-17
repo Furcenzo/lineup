@@ -136,7 +136,8 @@ Apple Developer ID (permissions would then survive updates).
 - #2: × on the selected tile closes the window (`kAXCloseButtonAttribute` + `kAXPressAction`); with ⇧ held
   (`HotkeyStateMachine.isShiftHeld`) it turns red and force quits the app (`forceTerminate`). Tiles are removed
   with `Selection.remove(at:)` (tested) and the panel is resized.
-- #3 (open): screenshots for the README and a showroom page on the author's website.
+- #3: README screenshots done (`Assets/screenshots/`, demo windows only, see CLAUDE.md); the showroom page on
+  the author's website is still open (separate repository).
 
 ## Technical notes
 

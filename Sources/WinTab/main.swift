@@ -177,9 +177,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let env = ProcessInfo.processInfo.environment
         if let view = env["WINTAB_VIEW"], let path = env["WINTAB_SNAPSHOT"] {
             // `WINTAB_VIEW=settings|permissions WINTAB_SNAPSHOT=/x.png`: image of that window's content.
+            // An opaque window background, so the text is readable in light and dark mode.
             let content: NSView = view == "settings"
-                ? NSHostingView(rootView: SettingsView(settings: settings, status: status))
-                : NSHostingView(rootView: PermissionsView(status: status) {})
+                ? NSHostingView(rootView: SettingsView(settings: settings, status: status)
+                    .background(Color(nsColor: .windowBackgroundColor)))
+                : NSHostingView(rootView: PermissionsView(status: status) {}
+                    .background(Color(nsColor: .windowBackgroundColor)))
             content.setFrameSize(content.fittingSize)
             content.layoutSubtreeIfNeeded()
             if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
@@ -199,6 +202,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         guard env["WINTAB_LIST"] != nil || env["WINTAB_SNAPSHOT"] != nil || env["WINTAB_SWITCH"] != nil else {
             return false
+        }
+        // `WINTAB_ONLY_APPS=com.apple.Safari,…`: list only these apps (screenshots with demo windows only).
+        if let only = env["WINTAB_ONLY_APPS"] {
+            switcher.listOptions.onlyBundleIDs = Set(only.split(separator: ",").map(String.init))
         }
         Task { @MainActor in
             print("Accessibility permission: \(AccessibilityPermission.isGranted)")
