@@ -28,6 +28,12 @@ drawing, commit the regenerated files); `scripts/build-app.sh` copies the .icns 
 Build: `swift build`, tests: `swift test`, app bundle: `./scripts/build-app.sh` → `build/WinTab.app`,
 build + restart: `./scripts/run.sh [sk|en]`.
 
+**The author's own installation:** `/Applications/WinTab.app` is managed by Homebrew (cask
+`furcenzo/tap/wintab`, adopted with `brew install --cask --adopt`) but contains a build signed with
+"WinTab Local Dev", so the permissions stay. `./scripts/run.sh` quits it while testing a dev build – start it
+again with `open /Applications/WinTab.app`. After a release: `brew upgrade --cask wintab`, then
+`./scripts/install-local.sh` (puts a dev-signed build of the latest tag back; Homebrew only checks the version).
+
 ## Code signing and permissions
 
 WinTab needs the Accessibility permission and, for previews, Screen Recording. macOS ties it to the code signature,

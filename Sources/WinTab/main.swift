@@ -34,9 +34,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.setActivationPolicy(.accessory)
         // WinTab has no windows most of the time; macOS must not quit it for that ("automatic termination").
         ProcessInfo.processInfo.disableAutomaticTermination("WinTab listens for its keyboard shortcut")
-        applySettings()
-        settings.onChange = { [unowned self] in applySettings() }
+        applySwitcherSettings()
+        // Debug commands only read windows: they must never start the keyboard tap or touch the system ⌘Tab
+        // (they end with exit(), which skips every place that would turn ⌘Tab back on).
+        switcher.setPreviews(settings.previews && ScreenRecordingPermission.isGranted)
         if runDebugCommand() { return }
+        settings.onChange = { [unowned self] in applySettings() }
         SystemAppSwitcher.installSignalHandlers()
         SystemAppSwitcher.startWatchdog()
         setUpStatusItem()
@@ -70,6 +73,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     /// Hands the settings to the switcher (called at launch and after every change in Settings).
     private func applySettings() {
+        applySwitcherSettings()
+        refreshState()
+        switcher.prefetchOtherSpaces()
+    }
+
+    /// The settings that only concern the switcher itself (no keyboard tap, no system ⌘Tab).
+    private func applySwitcherSettings() {
         if appliedShortcut != settings.shortcut {
             appliedShortcut = settings.shortcut
             switcher.setHotkey(settings.shortcut.config)
@@ -77,8 +87,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         switcher.showsAllSpaces = settings.allSpaces
         switcher.listOptions = settings.listOptions
         switcher.screenChoice = settings.screen
-        refreshState()
-        switcher.prefetchOtherSpaces()
     }
 
     /// Follows the permissions: starts or stops the keyboard tap and focus tracking, decides whether the system

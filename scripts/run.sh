@@ -16,3 +16,6 @@ else
     open -n build/WinTab.app
 fi
 echo "WinTab is running – look for its icon in the menu bar."
+if [[ -d /Applications/WinTab.app ]]; then
+    echo "(The installed WinTab was quit. Back to it: open /Applications/WinTab.app)"
+fi
