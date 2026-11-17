@@ -107,6 +107,10 @@ a GitHub Release with the zip; its "What's new" is the `## <version>` section of
 `## Unreleased` in `CHANGELOG.md`; at release time rename that heading to the version. Publishing is public
 and irreversible – only run `--publish` when the user explicitly asked for it. The repository is public at
 github.com/Furcenzo/wintab (pushed over HTTPS).
+At the end, `--publish` also runs `~/Projects/Private/dev.furian.sk/scripts/update-site.sh wintab` (if that
+repository is on this Mac): it copies a changed icon or screenshots to the showroom site https://dev.furian.sk and
+deploys it. Version and download link there follow the latest GitHub Release by themselves. New or renamed
+screenshots and changed feature texts have to be edited in that site's `public/index.html` by hand.
 
 ## Conventions
 

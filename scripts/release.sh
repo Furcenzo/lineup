@@ -89,3 +89,11 @@ grep -q "version \"$VERSION\"" "$CASK" && grep -q "sha256 \"$SHA\"" "$CASK" || {
 git -C "$TAP_DIR" commit --quiet --all --message "wintab $VERSION"
 git -C "$TAP_DIR" push --quiet origin HEAD
 echo "Updated furcenzo/tap: wintab $VERSION"
+
+# Refresh the showroom website https://dev.furian.sk (app icon and screenshots; its version numbers and download
+# links follow the latest release by themselves). Runs only where that site's repository is checked out (the
+# author's Mac; SHOWROOM_SITE_DIR overrides the path). A failure here does not undo the release.
+SITE_UPDATE="${SHOWROOM_SITE_DIR:-$HOME/Projects/Private/dev.furian.sk}/scripts/update-site.sh"
+if [[ -x "$SITE_UPDATE" ]]; then
+    "$SITE_UPDATE" wintab || echo "Updating dev.furian.sk failed – run $SITE_UPDATE wintab later." >&2
+fi
