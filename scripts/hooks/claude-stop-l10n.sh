@@ -1,6 +1,7 @@
 #!/bin/zsh
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Furcenzo
+# Part of mac-app-kit (shared scripts of the Furcenzo Mac apps): change it there and run its sync.sh, not here.
 #
 # Claude Code "Stop" hook (.claude/settings.json): before Claude finishes a turn in which
 # app texts changed, check that both languages are complete. Exit code 2 sends the errors
@@ -21,7 +22,7 @@ git status --porcelain -- 'Sources/*.swift' 'Sources/*.strings' 2>/dev/null | gr
 
 if ! report="$(./scripts/check-localization.sh 2>&1)"; then
     print -r -- "$report" | grep -E '^(error|check-localization)' >&2
-    echo "Every user-facing text must be English in code and translated in Sources/Lineup/Resources/sk.lproj/Localizable.strings (see CLAUDE.md)." >&2
+    echo "Every user-facing text must be English in code and translated in every <lang>.lproj/Localizable.strings (see CLAUDE.md)." >&2
     (( blocking )) && exit 2
 fi
 exit 0

@@ -1,9 +1,10 @@
 #!/bin/zsh
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Furcenzo
+# Part of mac-app-kit (shared scripts of the Furcenzo Mac apps): change it there and run its sync.sh, not here.
 #
 # Checks that every user-facing text in the code has a translation in every
-# Sources/Lineup/Resources/<lang>.lproj/Localizable.strings (except en, the development language).
+# <RESOURCES>/<lang>.lproj/Localizable.strings (app.conf; default Sources/<EXECUTABLE>/Resources) (except en, the development language).
 #
 # 1. The Swift compiler lists every localizable string (LocalizedStringKey literals,
 #    String(localized:)) while building into .build/l10n.
@@ -13,6 +14,7 @@
 # 3. Warnings: translations whose key is no longer used in the code.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+source scripts/app-config.sh
 
 OUT="$PWD/.build/l10n/strings"
 build() {
@@ -32,7 +34,7 @@ if [[ -z "$(ls "$OUT"/*.stringsdata 2>/dev/null)" ]]; then
     build
 fi
 
-/usr/bin/python3 -I - "$OUT" Sources/Lineup/Resources Sources <<'PY'
+/usr/bin/python3 -I - "$OUT" "$RESOURCES" Sources <<'PY'
 import glob, json, pathlib, re, subprocess, sys
 
 strings_dir, resources, sources = sys.argv[1:4]

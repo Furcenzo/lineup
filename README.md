@@ -161,9 +161,11 @@ See [CLAUDE.md](CLAUDE.md) for the detailed rules.
 - `Sources/Lineup` – the app: keyboard event tap, ⌘Tab takeover, focus tracking, window list via
   Accessibility, overlay panel, menu bar.
 - `Tests/LineupCoreTests` – tests for the core logic.
-- `Assets/` – the app icon (`AppIcon.icns`, `AppIcon.png`), drawn by `swift scripts/make-icon.swift`, and the
+- `Assets/` – the app icon (`AppIcon.icns`, `AppIcon.png`), drawn by `scripts/icon/AppIcon.swift` (`./scripts/make-icon.sh`), and the
   README screenshots (`screenshots/`).
 - `scripts/` – app bundle build, dev signing setup, icon, release, translation check and the Claude Code hook.
+  They come from [mac-app-kit](https://github.com/Furcenzo/mac-app-kit), the shared scripts of the author's Mac
+  apps; Lineup's settings for them (name, bundle ID, cask…) are in `app.conf`.
 
 ## Acknowledgments
 

@@ -1,20 +1,23 @@
 #!/bin/zsh
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Furcenzo
+# Part of mac-app-kit (shared scripts of the Furcenzo Mac apps): change it there and run its sync.sh, not here.
 #
 # One-time setup for development: creates a self-signed code signing certificate
-# "Lineup Local Dev" in your login keychain. scripts/build-app.sh then signs every build with it,
-# so macOS keeps the Accessibility (and later Screen Recording) permission between builds.
+# "<APP_NAME> Local Dev" in your login keychain. scripts/build-app.sh then signs every build with it,
+# so macOS keeps the app's permissions (Accessibility, Screen Recording, files…) between builds.
 #
 # Run it yourself in Terminal – macOS asks for your login password to trust the certificate:
 #   ./scripts/setup-dev-signing.sh
 #
 # The certificate is only good for signing apps on this Mac; it is not an Apple Developer ID and
 # cannot be used for public releases. Remove it any time in Keychain Access (login → My Certificates
-# → "Lineup Local Dev" → Delete). Based on AltTab's scripts/codesign (lwouis/alt-tab-macos, GPL-3.0).
+# → "<APP_NAME> Local Dev" → Delete). Based on AltTab's scripts/codesign (lwouis/alt-tab-macos, GPL-3.0).
 set -euo pipefail
+cd "$(dirname "$0")/.."
+source scripts/app-config.sh
 
-NAME="Lineup Local Dev"
+NAME="$DEV_IDENTITY"
 KEYCHAIN="$HOME/Library/Keychains/login.keychain-db"
 
 if security find-identity -v -p codesigning | grep -q "\"$NAME\""; then

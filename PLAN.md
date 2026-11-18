@@ -121,7 +121,7 @@ notifications could replace polling-style refreshes.
   creating the GitHub repository (assumed `Furcenzo/lineup` in `release.sh` / README) and
   `./scripts/release.sh 0.1.0 --publish` are up to the user.
 
-App icon added afterwards: `scripts/make-icon.swift` → `Assets/AppIcon.icns` (three stacked windows on a blue
+App icon added afterwards: `scripts/icon/AppIcon.swift` (`scripts/make-icon.sh`) → `Assets/AppIcon.icns` (three stacked windows on a blue
 rounded square).
 
 Ideas for later: refreshing an open switcher when the background search

@@ -1,6 +1,7 @@
 #!/bin/zsh
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Furcenzo
+# Part of mac-app-kit (shared scripts of the Furcenzo Mac apps): change it there and run its sync.sh, not here.
 #
 # Blocks a commit when a text in the app is missing a translation.
 # Enable once per clone:  git config core.hooksPath .githooks
