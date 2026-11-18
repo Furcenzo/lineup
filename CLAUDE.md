@@ -31,7 +31,7 @@ development, start and quit Lineup (or log out).
 App icon: `Assets/AppIcon.icns` + `AppIcon.png`, drawn by `scripts/icon/AppIcon.swift` (Core Graphics);
 regenerate both with `./scripts/make-icon.sh` and commit them. `scripts/build-app.sh` copies the .icns into the bundle.
 
-Build: `swift build`, tests: `swift test`, app bundle: `./scripts/build-app.sh` → `build/Lineup.app`,
+Build: `swift build`, tests: `swift test`, app bundle: `./scripts/build-app.sh` → `build/Lineup Dev.app`,
 build + restart: `./scripts/run.sh [sk|en]`.
 
 ## Shared scripts (mac-app-kit)
@@ -44,8 +44,8 @@ settings for them (name, bundle ID, repository, cask, dev.furian.sk slug, menu b
 **Development builds are "Lineup Dev"** (bundle ID `io.github.furcenzo.lineup.dev`, `CHANNEL=dev`, the default
 of `build-app.sh`); only `release.sh` and `install-local.sh` build the real `io.github.furcenzo.lineup`
 (`CHANNEL=release`) and they delete their staging copies afterwards. Reason: the login item, Spotlight and
-LaunchServices pick an app by bundle ID – a second copy with the real ID (e.g. `build/Lineup.app`) once made
-the login item start the dev build. "Lineup Dev" needs its own Accessibility / Screen Recording permissions
+LaunchServices pick an app by bundle ID – a second copy with the real ID once made
+the login item start the dev build, and a dev build named `build/Lineup.app` was opened by Spotlight. "Lineup Dev" needs its own Accessibility / Screen Recording permissions
 (granted once); debug commands can also run against `/Applications/Lineup.app` (they never touch ⌘Tab).
 
 **The author's own installation:** `/Applications/Lineup.app` is managed by Homebrew (cask
@@ -65,7 +65,7 @@ After a signing identity change, the user has to remove Lineup from System Setti
 Accessibility and add it again.
 
 Testing without a keyboard (results on stdout; `open --stdout <file> --env …` works too):
-`build/Lineup.app/Contents/MacOS/Lineup` with `LINEUP_LIST=1` (print the window list),
+`"build/Lineup Dev.app/Contents/MacOS/Lineup"` with `LINEUP_LIST=1` (print the window list),
 `LINEUP_SNAPSHOT=/x.png` (render the overlay to PNG, no screen recording needed), `LINEUP_CYCLE=<n>`
 (open/close smoke test), `LINEUP_SPACES=1` (private Space APIs report), `LINEUP_VIEW=settings|permissions`
 with `LINEUP_SNAPSHOT` (image of those windows), `LINEUP_ONLY_APPS=<bundle IDs>` (list only those apps) or
@@ -112,7 +112,7 @@ Every change that adds or changes a user-facing text must keep **both languages*
 ## Releases
 
 `./scripts/release.sh <version>` builds a universal (Apple silicon + Intel), ad-hoc signed app into
-`build/release/` (never over the dev-signed `build/Lineup.app`) and zips it into `build/`. `./scripts/release.sh <version> --publish` also tags `v<version>`, pushes the tag and creates
+`build/release/` (never over the dev-signed `build/Lineup Dev.app`) and zips it into `build/`. `./scripts/release.sh <version> --publish` also tags `v<version>`, pushes the tag and creates
 a GitHub Release with the zip; its "What's new" is the `## <version>` section of `CHANGELOG.md`
 (the script refuses to publish without it), the download instructions come from `scripts/release-notes.md`, and it bumps `version`/`sha256` of `Casks/lineup.rb` in the
 `Furcenzo/homebrew-tap` repository (shared with Brew GUI; users install with

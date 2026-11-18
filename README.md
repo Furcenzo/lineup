@@ -94,7 +94,7 @@ swift build
 swift test
 ```
 
-Build the app into `build/Lineup.app` (and restart it) – development builds are called **Lineup Dev**
+Build the app into `build/Lineup Dev.app` (and restart it) – development builds are called **Lineup Dev**
 (their own bundle ID, settings and permissions), so they never get mixed up with an installed Lineup:
 
 ```bash
@@ -134,7 +134,7 @@ log stream --level debug --predicate 'subsystem == "io.github.furcenzo.lineup"'
 ```
 
 ```bash
-LINEUP_LIST=1 build/Lineup.app/Contents/MacOS/Lineup
+LINEUP_LIST=1 "build/Lineup Dev.app/Contents/MacOS/Lineup"
 ```
 
 ## Translations
