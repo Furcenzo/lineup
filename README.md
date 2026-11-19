@@ -16,7 +16,7 @@ WinTab from those lists in System Settings.
 ## Screenshots
 
 Hold ⌘ and press Tab – window previews of all your desktops, most recently used first. The selected window has
-a × to close it (with ⇧ held: force quit its app).
+a × to close it (with ⇧ held: force quit its app) – or press W (⇧W) while you still hold ⌘.
 
 ![The Lineup switcher with four window previews](Assets/screenshots/switcher.png)
 
@@ -55,6 +55,9 @@ Settings and allow it again.
 - **Tab** / **→** / **↓** – next window, **⇧ Tab** / **←** / **↑** – previous window.
 - Release **⌘** (or press **Return**) – switch to the selected window. A quick ⌘Tab flips to the previous window.
 - **Esc** – close without switching. A mouse click on a window switches to it.
+- **W** (⌘W while ⌘ is held) – close the selected window, **⇧ W** – force quit its app. The switcher stays open.
+- The mouse selects a window only when it moves to another tile – the tile that appears under a pointer
+  standing still is not selected.
 - Minimized windows are listed at the end and are restored when chosen; windows of hidden apps are shown too.
 
 Lineup lives in the menu bar (no Dock icon). **Settings…** (⌘,) in its menu – or open Lineup again (Finder,

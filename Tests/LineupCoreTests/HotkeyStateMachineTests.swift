@@ -129,4 +129,18 @@ import Testing
         _ = m.handle(.modifiersChanged(.shift))   // ⌥ released → switch, shift no longer counts
         #expect(!m.isActive && !m.isShiftHeld)
     }
+
+    @Test func wClosesAndShiftWForceQuitsWhileOpen() {
+        var m = HotkeyStateMachine(config: .commandTab)
+        #expect(m.handle(.keyDown(KeyCode.w, .command)) == .pass)   // ⌘W outside the switcher is the app's
+        #expect(m.handle(.keyUp(KeyCode.w, .command)) == .pass)
+        _ = m.handle(.keyDown(KeyCode.tab, .command))
+        #expect(m.handle(.keyDown(KeyCode.w, .command)) == KeyEventResult(action: .closeWindow, swallow: true))
+        // Holding W repeats keyDown – only the first press closes a window.
+        #expect(m.handle(.keyDown(KeyCode.w, .command)) == KeyEventResult(swallow: true))
+        #expect(m.handle(.keyUp(KeyCode.w, .command)).swallow)
+        #expect(m.handle(.keyDown(KeyCode.w, [.command, .shift])) == KeyEventResult(action: .forceQuitApp, swallow: true))
+        #expect(m.handle(.keyUp(KeyCode.w, [.command, .shift])).swallow)
+        #expect(m.isActive)
+    }
 }

@@ -126,7 +126,7 @@ rounded square).
 
 Ideas for later: refreshing an open switcher when the background search
 finds more windows, hidden-app windows on other Spaces, WindowServer notifications instead of polling,
-keyboard shortcuts inside the switcher (Q quit, W close, M minimize), a notarized release once there is an
+keyboard shortcuts inside the switcher (Q quit, M minimize; W close is done), a notarized release once there is an
 Apple Developer ID (permissions would then survive updates).
 
 ### After 0.1.0
@@ -153,6 +153,15 @@ once (`AppSettings.migrateLegacyDefaults`), a running WinTab is quit at launch, 
 maps `wintab` → `lineup` (but Homebrew's per-cask trust doesn't follow the rename – users switch with
 `brew install --cask furcenzo/tap/lineup`, which migrates the old installation). Permissions and the login item can't be carried over (new bundle ID) – the user
 allows them again. The `WT*` prefix in `CPrivate` stayed (internal).
+
+### After 0.2.0
+
+- ⌘W / ⌘⇧W in the open switcher (2026-11-19): `HotkeyStateMachine` turns W into `.closeWindow` and ⇧W into
+  `.forceQuitApp` (the same code as the × button; a held W closes only one window – its repeated keyDowns
+  are ignored until the keyUp). The panel appears at once if it was not shown yet.
+- Hover doesn't grab the selection (2026-11-19): `HoverFilter` (LineupCore, tested) – when the panel appears
+  or its tiles move (a window closed), the tile entered first with the pointer still where it was (±3 pt)
+  is ignored until the pointer leaves it. Chosen over "any mouse movement" because touchpads jitter.
 
 ## Technical notes
 

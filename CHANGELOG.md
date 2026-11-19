@@ -5,6 +5,11 @@ version into the GitHub Release notes, so add a section before publishing.
 
 ## Unreleased
 
+- While the switcher is open, ⌘W closes the selected window and ⌘⇧W force quits its app – the switcher stays
+  open, like the × button on the tile.
+- The mouse no longer grabs the selection when the switcher opens: the tile under a pointer that stands still is
+  ignored until the pointer moves to another tile. A click works as before.
+
 ## 0.2.0
 
 - **WinTab is now Lineup.** The old name clashed with the Wintab tablet API. Homebrew users switch once with

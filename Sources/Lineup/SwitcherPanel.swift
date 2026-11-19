@@ -23,8 +23,8 @@ final class SwitcherModel {
     /// Big tiles with window thumbnails instead of app icons.
     var showsPreviews = false
     var layout = GridLayout(columns: 1, rows: 1, scale: 1)
-    /// Mouse hover over an item.
-    var onHover: (Int) -> Void = { _ in }
+    /// The mouse pointer entered (true) or left (false) an item (index, item ID).
+    var onHover: (Int, String, Bool) -> Void = { _, _, _ in }
     /// Mouse click on an item.
     var onClick: (Int) -> Void = { _ in }
     /// ⇧ is held: the close button on the selected tile force quits the app instead.
@@ -234,7 +234,7 @@ struct SwitcherView: View {
             }
         }
         .contentShape(Rectangle())
-        .onHover { inside in if inside { model.onHover(index) } }
+        .onHover { inside in model.onHover(index, item.id, inside) }
         .onTapGesture { model.onClick(index) }
     }
 

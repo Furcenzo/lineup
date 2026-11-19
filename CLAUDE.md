@@ -5,7 +5,7 @@ Agent app (`LSUIElement`, menu bar icon only). **Read [PLAN.md](PLAN.md) first**
 notes and risks; update it when a milestone is done or the plan changes.
 
 - `Sources/LineupCore` – pure logic, no AppKit: window list building (`WindowListBuilder`), MRU order
-  (`RecentWindows`), tile grid and thumbnail sizes (`GridLayout`, `aspectFit`), selection (`Selection`), hotkey state machine + shortcut setting (`HotkeyStateMachine`,
+  (`RecentWindows`), tile grid and thumbnail sizes (`GridLayout`, `aspectFit`), selection (`Selection`), mouse hover (`HoverFilter`), hotkey state machine + shortcut setting (`HotkeyStateMachine`,
   `ShortcutChoice`). Tested in `Tests/LineupCoreTests`.
 - `Sources/CPrivate` – private macOS APIs: declarations of `_AXUIElementGetWindow` and the CGS symbolic hot
   keys, plus `WT*` C wrappers that look SkyLight/HIServices symbols up with `dlsym` (Spaces, window lists,

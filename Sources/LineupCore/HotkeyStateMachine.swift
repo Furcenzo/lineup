@@ -23,6 +23,7 @@ public enum KeyCode {
     public static let rightArrow: UInt16 = 124
     public static let downArrow: UInt16 = 125
     public static let upArrow: UInt16 = 126
+    public static let w: UInt16 = 13
 }
 
 /// A keyboard event seen by the global event tap.
@@ -41,6 +42,10 @@ public enum SwitcherAction: Sendable, Equatable {
     case confirm
     /// Close the switcher without switching.
     case cancel
+    /// Close the selected window (W); the switcher stays open.
+    case closeWindow
+    /// Force quit the app of the selected window (⇧W); the switcher stays open.
+    case forceQuitApp
 }
 
 /// What to do with one keyboard event: an optional switcher action, and whether the event must be
@@ -163,6 +168,10 @@ public struct HotkeyStateMachine: Sendable {
         case KeyCode.return, KeyCode.keypadEnter, KeyCode.space:
             isActive = false
             return swallow(code, .confirm)
+        case KeyCode.w:
+            // A held W repeats its keyDown (no keyUp in between) – close only one window per press.
+            if swallowedKeys.contains(code) { return swallow(code, nil) }
+            return swallow(code, modifiers.contains(.shift) ? .forceQuitApp : .closeWindow)
         default:
             // Typing while the switcher is open must not reach the app underneath.
             return swallow(code, nil)

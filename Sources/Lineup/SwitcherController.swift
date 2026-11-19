@@ -19,6 +19,7 @@ final class SwitcherController {
     private var machine: HotkeyStateMachine
     private var handles = [WindowHandle]()
     private var selection = Selection(count: 0)
+    private var hoverFilter = HoverFilter()
     private var recent = RecentWindows()
     private let panel = SwitcherPanel()
     private let thumbnails = ThumbnailStore()
@@ -40,7 +41,7 @@ final class SwitcherController {
     init(config: HotkeyConfig) {
         machine = HotkeyStateMachine(config: config)
         thumbnails.onUpdate = { [weak self] windowID, image in self?.panel.model.setThumbnail(image, for: windowID) }
-        panel.model.onHover = { [weak self] index in self?.select(index) }
+        panel.model.onHover = { [weak self] index, id, inside in self?.hover(index, id: id, inside: inside) }
         panel.model.onClick = { [weak self] index in
             guard let self else { return }
             select(index)
@@ -94,6 +95,8 @@ final class SwitcherController {
         case .previous: loadIfPending(); selection.previous(); updateSelection()
         case .confirm: loadIfPending(); confirm()
         case .cancel: close()
+        case .closeWindow: loadIfPending(); selection.index.map(closeWindow(at:)); showNow()
+        case .forceQuitApp: loadIfPending(); selection.index.map(forceQuitApp(at:)); showNow()
         }
     }
 
@@ -164,8 +167,32 @@ final class SwitcherController {
             try? await Task.sleep(for: Self.showDelay)
             guard let self, !Task.isCancelled, machine.isActive else { return }
             loadIfPending()
-            panel.present(on: screenChoice)
+            present()
         }
+    }
+
+    /// Shows the panel right away (W pressed before it appeared – the user sees what was closed).
+    private func showNow() {
+        guard machine.isActive, !panel.isVisible else { return }
+        showTask?.cancel()
+        showTask = nil
+        present()
+    }
+
+    /// Sizes, centers and shows the panel. The tile that ends up under a mouse pointer standing still is
+    /// not selected by the hover (only by moving to another tile, or by a click).
+    private func present() {
+        panel.present(on: screenChoice)
+        let mouse = NSEvent.mouseLocation
+        hoverFilter.reset(x: mouse.x, y: mouse.y)
+    }
+
+    private func hover(_ index: Int, id: String, inside: Bool) {
+        guard inside else { return hoverFilter.exit(id) }
+        // SwiftUI may still report a tile of the list before a window was closed.
+        guard handles.indices.contains(index), handles[index].window.id == id else { return }
+        let mouse = NSEvent.mouseLocation
+        if hoverFilter.enter(id, x: mouse.x, y: mouse.y) { select(index) }
     }
 
     private func loadIfPending() {
@@ -228,7 +255,7 @@ final class SwitcherController {
         panel.model.items = panel.model.items.enumerated().filter { !removed.contains($0.offset) }.map(\.element)
         updateSelection()
         // Fewer tiles – size and center the panel again.
-        if panel.isVisible { panel.present(on: screenChoice) }
+        if panel.isVisible { present() }
     }
 
     private func close() {
