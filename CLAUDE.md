@@ -111,7 +111,8 @@ Every change that adds or changes a user-facing text must keep **both languages*
 
 ## Releases
 
-`./scripts/release.sh <version>` builds a universal (Apple silicon + Intel), ad-hoc signed app into
+`./scripts/release.sh <version>` builds a universal (Apple silicon + Intel) app signed with the shared
+"Furcenzo Release" certificate (created once with `./scripts/setup-dev-signing.sh --release`) into
 `build/release/` (never over the dev-signed `build/Lineup Dev.app`) and zips it into `build/`. `./scripts/release.sh <version> --publish` also tags `v<version>`, pushes the tag and creates
 a GitHub Release with the zip; its "What's new" is the `## <version>` section of `CHANGELOG.md`
 (the script refuses to publish without it), the download instructions come from `scripts/release-notes.md`, and it bumps `version`/`sha256` of `Casks/lineup.rb` in the
