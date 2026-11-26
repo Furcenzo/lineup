@@ -5,6 +5,11 @@ version into the GitHub Release notes, so add a section before publishing.
 
 ## Unreleased
 
+## 0.3.1
+
+- Lineup is now signed with a permanent certificate, so macOS keeps the Accessibility and Screen Recording
+  permissions across updates. After this update allow both once more – for the last time.
+
 ## 0.3.0
 
 - While the switcher is open, ⌘W closes the selected window and ⌘⇧W force quits its app – the switcher stays
